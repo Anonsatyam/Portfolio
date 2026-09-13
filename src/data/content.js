@@ -46,7 +46,7 @@ export const experience = [
   },
   {
     company: "Thales",
-    role: "Software Engineer III",
+    role: "Software Engineer III — OTA Cloud",
     period: "Aug 2020 — Sep 2025",
     location: "Noida, India",
     points: [
