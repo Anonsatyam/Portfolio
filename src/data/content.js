@@ -55,7 +55,7 @@ export const skills = [
     category: "Languages & Libraries",
     items: [
       "HTML", "CSS", "SCSS", "JavaScript", "TypeScript", "Java",
-      "Angular", "React.js", "RxJS", "NgRx", "Bootstrap", "Material UI", "Tailwind CSS",
+      "Angular", "React.js", "Next.js", "RxJS", "NgRx", "Bootstrap", "Material UI", "Tailwind CSS",
     ],
   },
   {
