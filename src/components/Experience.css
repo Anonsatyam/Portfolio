@@ -1,0 +1,111 @@
+.experience__timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.experience__item {
+  display: flex;
+  gap: 1.25rem;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.experience__icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.experience__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.experience__top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.experience__role {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.experience__company {
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  margin-top: 0.15rem;
+}
+
+.experience__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.experience__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.experience__points {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.experience__points li {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+}
+
+.experience__points li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.experience__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .experience__item {
+    flex-direction: column;
+  }
+  .experience__meta {
+    text-align: left;
+  }
+  .experience__meta span {
+    justify-content: flex-start;
+  }
+  .experience__top {
+    flex-direction: column;
+  }
+}
