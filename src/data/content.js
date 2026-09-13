@@ -3,7 +3,7 @@
 
 export const personal = {
   name: "Satyam Kumar",
-  role: "Full Stack Developer — React.js & Java",
+  role: "Full Stack Developer — Angular, React.js & Java",
   location: "Noida, India",
   email: "satyamdeveloper98@gmail.com",
   linkedin: "https://in.linkedin.com/in/satyam-js",
@@ -70,27 +70,30 @@ export const skills = [
 
 export const projects = [
   {
-    title: "COTA Dashboard",
+    title: "OTA Cloud",
     tech: ["Angular 10/14/18", "Java", "NgRx"],
+    link: null,
     points: [
       "Engineered a responsive dashboard that streamlined Over The Air (OTA) update management, enhancing operational efficiency and reducing troubleshooting time by an average of 50 hours per month for the engineering team.",
       "Migrated the application framework to Angular 18, enhancing code maintainability by reducing technical debt and increasing performance with faster load times under high user traffic.",
     ],
   },
   {
-    title: "AOTA (Advance Over The Air) Solution",
-    tech: ["Angular", "Java", "Microservices"],
+    title: "Sarkari Naukri",
+    tech: ["Next.js", "React"],
+    link: "https://naukari-lac.vercel.app/",
     points: [
-      "Designed and implemented an advanced AOTA solution that enabled seamless SIM updates, improving efficiency in remote provisioning processes for over 10,000 devices with zero downtime during transitions.",
-      "Optimized remote SIM provisioning processes, improving speed of device activation by 40% and enhancing overall security protocols to safeguard sensitive user data.",
+      "Built an independent portal aggregating verified Indian government job listings, sourced directly from official notifications.",
+      "Shipped an eligibility checker, smart job filters, results & admit card access, and full English/Hindi multilingual support.",
     ],
   },
   {
-    title: "OTA-FLY Platform",
-    tech: ["React.js", "Java", "Docker", "CI/CD"],
+    title: "Random JSON Data Generator",
+    tech: ["VS Code Extension API", "TypeScript"],
+    link: "https://marketplace.visualstudio.com/items?itemName=SatyamSingh.randomjson",
     points: [
-      "Built a React.js-based web solution for telecom operators to manage SIM updates.",
-      "Developed a CI/CD pipeline for automated deployment.",
+      "Published a VS Code extension that generates random JSON data into a temporary file for quick testing and development — 200+ installs with a 5-star rating on the Marketplace.",
+      "Designed for zero-config use: install and run 'Json Data Generator' straight from the command palette.",
     ],
   },
 ];
