@@ -34,8 +34,20 @@ export const about = {
 export const experience = [
   {
     company: "Thales",
+    role: "Software Engineer III — Thales Adaptive Connect (TAC)",
+    period: "Oct 2025 — Present",
+    location: "Noida, India",
+    points: [
+      "Working on Thales Adaptive Connect (TAC), a cloud-based connectivity management solution that automates and optimizes local network connections for IoT devices at first power-on.",
+      "Managing the lifecycle of eSIM profiles across IoT and mobile devices, built on the GSMA SGP.22 and SGP.32 specifications.",
+      "Contributing full-stack across the project: React.js UI, Java backend services, and end-to-end test automation with Playwright.",
+    ],
+    tags: ["React.js", "Java", "Playwright", "IoT", "eSIM", "GSMA SGP.22/32"],
+  },
+  {
+    company: "Thales",
     role: "Software Engineer III",
-    period: "Aug 2020 — Present",
+    period: "Aug 2020 — Sep 2025",
     location: "Noida, India",
     points: [
       "Spearheaded the design and development of the COTA dashboard using Angular 10, leading migration to Angular 14 and 18 to enhance performance and maintainability.",
