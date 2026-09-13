@@ -58,7 +58,7 @@ export const experience = [
       "Engineered and deployed robust Java-based APIs targeting SIM service functionalities, improving data retrieval efficiency by 40% while ensuring seamless integration with existing systems.",
       "Optimized NgRx for faster data retrieval, cutting load times by 30%.",
     ],
-    tags: ["Angular", "React.js", "Java", "NgRx", "Playwright", "CI/CD"],
+    tags: ["Angular", "Java", "NgRx", "Robot Framework", "CI/CD"],
   },
 ];
 
