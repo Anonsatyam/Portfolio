@@ -22,7 +22,7 @@ export default function Experience() {
   return (
     <section id="experience" className="section section--alt experience">
       <div className="container">
-        <Reveal>
+        <Reveal variant="heading">
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">02</span>Career Journey</span>
             <AnimatedHeading as="h2" className="section-title" text="Experience" />

@@ -36,6 +36,39 @@ body.has-custom-cursor * {
   background: color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
+/* Over elements that declare one, the ring becomes a labelled pill —
+   "drag me" on the badge, "view" over a project. */
+.cursor-ring--labelled {
+  width: 76px;
+  height: 76px;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.cursor-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cursor-ring__label {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffffff;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.cursor-ring--labelled .cursor-ring__label {
+  opacity: 1;
+  transform: scale(1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cursor-dot,
   .cursor-ring {

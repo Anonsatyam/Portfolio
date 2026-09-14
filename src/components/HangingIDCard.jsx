@@ -201,6 +201,7 @@ export default function HangingIDCard() {
         >
           <motion.div
             className="id-card__stage"
+            data-cursor-label={isCoarse ? undefined : "drag me"}
             style={{ rotateX: reduced ? 0 : tiltX, rotateY: reduced ? 0 : tiltY }}
             onPointerDown={startDrag}
             onPointerMove={moveDrag}

@@ -40,6 +40,7 @@ export default function ProjectMockup({ url, children }) {
     <div
       className="project-mockup"
       ref={ref}
+      data-cursor-label="view live"
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       aria-hidden="true"

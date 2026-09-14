@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import "./Cursor.css";
 
 const HOVER_SELECTOR = "a, button, .card, [data-cursor-hover]";
+// Elements that say what they do when you reach them, rather than
+// showing the same generic ring everywhere.
+const LABEL_SELECTOR = "[data-cursor-label]";
 
 /**
  * A custom designer cursor: a small dot that tracks the mouse instantly,
@@ -14,6 +17,7 @@ export default function Cursor() {
   const dotRef = useRef(null);
   const ringRef = useRef(null);
   const [hovering, setHovering] = useState(false);
+  const [label, setLabel] = useState("");
 
   useEffect(() => {
     const isFinePointer = window.matchMedia("(pointer: fine)").matches;
@@ -50,9 +54,12 @@ export default function Cursor() {
 
     const onOver = (e) => {
       if (e.target.closest?.(HOVER_SELECTOR)) setHovering(true);
+      const labelled = e.target.closest?.(LABEL_SELECTOR);
+      if (labelled) setLabel(labelled.getAttribute("data-cursor-label") || "");
     };
     const onOut = (e) => {
       if (e.target.closest?.(HOVER_SELECTOR)) setHovering(false);
+      if (e.target.closest?.(LABEL_SELECTOR)) setLabel("");
     };
     const onLeaveWindow = () => {
       dot.style.opacity = "0";
@@ -87,7 +94,13 @@ export default function Cursor() {
   return (
     <>
       <div ref={dotRef} className="cursor-dot" aria-hidden="true" />
-      <div ref={ringRef} className={`cursor-ring ${hovering ? "cursor-ring--hover" : ""}`} aria-hidden="true" />
+      <div
+        ref={ringRef}
+        className={`cursor-ring ${hovering ? "cursor-ring--hover" : ""} ${label ? "cursor-ring--labelled" : ""}`}
+        aria-hidden="true"
+      >
+        <span className="cursor-ring__label">{label}</span>
+      </div>
     </>
   );
 }

@@ -73,6 +73,18 @@
   flex: 1;
   min-width: 0;
   padding: clamp(1.75rem, 4vw, 2.5rem);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base),
+    transform var(--transition-base);
+}
+
+.experience__item:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+/* The dot lights up with its card, tying the row to the timeline. */
+.experience__row:hover .experience__dot {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 4px var(--color-accent-soft);
 }
 
 .experience__current-badge {

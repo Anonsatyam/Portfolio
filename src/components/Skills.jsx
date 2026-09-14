@@ -2,8 +2,12 @@ import { motion } from "framer-motion";
 import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import Icon from "../lib/icons";
+import Marquee from "./Marquee";
 import { skills } from "../data/content";
 import "./Skills.css";
+
+// The core stack, called out again as a moving band under the grid.
+const MARQUEE_ITEMS = skills.flatMap((g) => g.items.filter((i) => i.core).map((i) => i.name));
 
 const container = {
   hidden: {},
@@ -19,7 +23,7 @@ export default function Skills() {
   return (
     <section id="skills" className="section skills">
       <div className="container">
-        <Reveal>
+        <Reveal variant="heading">
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">03</span>What I Know</span>
             <AnimatedHeading as="h2" className="section-title" text="The Stack I Build With" />
@@ -59,6 +63,10 @@ export default function Skills() {
             </Reveal>
           ))}
         </div>
+      </div>
+
+      <div className="skills__marquee">
+        <Marquee items={MARQUEE_ITEMS} speed={32} />
       </div>
     </section>
   );

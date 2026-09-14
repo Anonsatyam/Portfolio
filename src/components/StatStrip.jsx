@@ -12,11 +12,7 @@ function Stat({ value, suffix, label, detail, index }) {
   const inView = useInView(ref, { once: true, amount: 0.5 });
 
   useEffect(() => {
-    if (!inView || !numRef.current) return;
-    if (prefersReducedMotion()) {
-      numRef.current.textContent = String(value);
-      return;
-    }
+    if (!inView || !numRef.current || prefersReducedMotion()) return;
     const controls = animate(0, value, {
       duration: 1.3,
       delay: index * 0.08,
@@ -30,8 +26,10 @@ function Stat({ value, suffix, label, detail, index }) {
 
   return (
     <div className="stat" ref={ref}>
+      {/* Renders the real figure up front, so it's correct even if the
+          count-up never runs — reduced motion, no JS, or never scrolled to. */}
       <p className="stat__value">
-        <span ref={numRef}>0</span>
+        <span ref={numRef}>{value}</span>
         <span className="stat__suffix">{suffix}</span>
       </p>
       <p className="stat__label">{label}</p>

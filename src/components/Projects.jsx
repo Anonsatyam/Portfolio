@@ -42,7 +42,7 @@ export default function Projects() {
   return (
     <section id="projects" className="section section--alt projects">
       <div className="container">
-        <Reveal>
+        <Reveal variant="heading">
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">04</span>My Work</span>
             <AnimatedHeading as="h2" className="section-title" text="Things I've Shipped" />

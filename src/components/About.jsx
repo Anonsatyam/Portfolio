@@ -13,7 +13,7 @@ export default function About() {
       <div className="container">
         <StatStrip />
 
-        <Reveal>
+        <Reveal variant="heading">
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">01</span>About Me</span>
             <AnimatedHeading as="h2" className="section-title" text="Who I Am" />

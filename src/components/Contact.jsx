@@ -35,7 +35,7 @@ export default function Contact() {
   return (
     <section id="contact" className="section section--alt contact">
       <div className="container">
-        <Reveal>
+        <Reveal variant="heading">
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">06</span>Get In Touch</span>
             <AnimatedHeading as="h2" className="section-title" text="Let's Work Together" />

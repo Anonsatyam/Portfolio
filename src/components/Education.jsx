@@ -9,7 +9,7 @@ export default function Education() {
   return (
     <section id="education" className="section education">
       <div className="container">
-        <Reveal>
+        <Reveal variant="heading">
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">05</span>Background</span>
             <AnimatedHeading as="h2" className="section-title" text="Where I Started" />
