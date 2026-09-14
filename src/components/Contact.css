@@ -16,7 +16,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--brand, var(--color-accent)) 12%, white);
+  background: color-mix(in srgb, var(--brand, var(--color-accent)) 20%, var(--color-surface));
   color: var(--brand, var(--color-accent));
   display: flex;
   align-items: center;
@@ -27,7 +27,7 @@
 
 .contact__card:hover .contact__icon {
   background: var(--brand, var(--color-accent));
-  color: #fff;
+  color: var(--brand-contrast, #fff);
 }
 
 .contact__label {

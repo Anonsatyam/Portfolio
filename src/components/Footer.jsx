@@ -1,4 +1,5 @@
 import { FiArrowUp } from "react-icons/fi";
+import { FaHeart } from "react-icons/fa";
 import { personal } from "../data/content";
 import "./Footer.css";
 
@@ -9,7 +10,8 @@ export default function Footer() {
     <footer className="footer">
       <div className="container footer__inner">
         <p className="footer__text">
-          © {new Date().getFullYear()} {personal.name}. Built with React &amp; Framer Motion.
+          © {new Date().getFullYear()} {personal.name}. Built with{" "}
+          <FaHeart className="footer__heart" aria-label="love" />
         </p>
         <button className="footer__top" onClick={scrollTop} aria-label="Back to top">
           <FiArrowUp size={18} />

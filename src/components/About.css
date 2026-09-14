@@ -51,7 +51,7 @@
 .about__pillar-title {
   font-size: var(--fs-sm);
   font-weight: 700;
-  color: var(--color-ink);
+  color: var(--color-accent);
   margin-bottom: 0.4rem;
 }
 

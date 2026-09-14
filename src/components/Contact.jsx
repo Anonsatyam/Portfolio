@@ -24,7 +24,8 @@ const links = [
     label: "GitHub",
     value: "Anonsatyam",
     href: personal.github,
-    brand: "#181717",
+    brand: "#ffffff",
+    contrast: "#000000",
   },
 ];
 
@@ -52,7 +53,10 @@ export default function Contact() {
                 rel="noreferrer"
                 className="contact__card card"
               >
-                <div className="contact__icon" style={{ "--brand": link.brand }}>
+                <div
+                  className="contact__icon"
+                  style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "#ffffff" }}
+                >
                   {link.img ? (
                     <img src={link.img} alt="" width={30} height={30} loading="lazy" />
                   ) : (

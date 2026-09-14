@@ -1,18 +1,19 @@
 :root {
-  /* Colors — Atlassian-inspired white / black / grey / blue */
-  --color-bg: #ffffff;
-  --color-bg-alt: #f4f5f7;
-  --color-surface: #ffffff;
-  --color-text: #172b4d;
-  --color-text-muted: #5e6c84;
-  --color-text-soft: #7a869a;
-  --color-border: #dfe1e6;
-  --color-border-strong: #c1c7d0;
-  --color-accent: #0052cc;
-  --color-accent-hover: #0065ff;
-  --color-accent-soft: #deebff;
-  --color-accent-dark: #0747a6;
-  --color-ink: #091e42;
+  /* Colors — full dark theme: black surfaces, white/grey text, red accent */
+  color-scheme: dark;
+  --color-bg: #000000;
+  --color-bg-alt: #0f0f0f;
+  --color-surface: #1a1a1a;
+  --color-text: #f0f0f0;
+  --color-text-muted: #a3a3a3;
+  --color-text-soft: #757575;
+  --color-border: #2a2a2a;
+  --color-border-strong: #404040;
+  --color-accent: #ff1e1e;
+  --color-accent-hover: #ff4747;
+  --color-accent-soft: #2b0d0d;
+  --color-accent-dark: #ff6b6b;
+  --color-ink: #ffffff;
 
   /* Typography */
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -35,9 +36,9 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
-  --shadow-sm: 0 1px 3px rgba(9, 30, 66, 0.08), 0 1px 2px rgba(9, 30, 66, 0.06);
-  --shadow-md: 0 4px 12px rgba(9, 30, 66, 0.1), 0 2px 4px rgba(9, 30, 66, 0.06);
-  --shadow-lg: 0 12px 28px rgba(9, 30, 66, 0.14), 0 4px 8px rgba(9, 30, 66, 0.08);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.14), 0 4px 8px rgba(0, 0, 0, 0.08);
 
   --transition-fast: 0.18s ease;
   --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
