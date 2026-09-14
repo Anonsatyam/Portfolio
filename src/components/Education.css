@@ -14,19 +14,9 @@
 
 .education__icon {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.education__icon--gold {
-  background: #fff7e6;
-  color: #b78103;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
 }
 
 .education__title {

@@ -8,13 +8,23 @@
   padding: clamp(1.5rem, 3vw, 2rem);
 }
 
+.skills__category-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.skills__category-head img {
+  flex-shrink: 0;
+}
+
 .skills__category {
   font-size: var(--fs-base);
   font-weight: 700;
   color: var(--color-ink);
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .skills__badges {

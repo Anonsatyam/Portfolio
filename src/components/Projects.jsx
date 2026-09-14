@@ -1,6 +1,7 @@
-import { FiFolder, FiCheckCircle, FiExternalLink } from "react-icons/fi";
+import { FiCheckCircle, FiExternalLink } from "react-icons/fi";
 import Reveal from "./Reveal";
 import { projects } from "../data/content";
+import { ICONS_3D } from "../lib/icons3d";
 import "./Projects.css";
 
 export default function Projects() {
@@ -19,12 +20,10 @@ export default function Projects() {
 
         <div className="projects__grid">
           {projects.map((project, i) => (
-            <Reveal key={project.title} delay={i * 0.12} direction="up">
+            <Reveal key={project.title} delay={i * 0.12} direction="up" className="projects__card-wrap">
               <div className="projects__card card">
                 <div className="projects__top">
-                  <div className="projects__icon">
-                    <FiFolder size={22} />
-                  </div>
+                  <img className="projects__icon" src={ICONS_3D[project.icon]} alt="" width={40} height={40} loading="lazy" />
                   {project.link && (
                     <a
                       href={project.link}

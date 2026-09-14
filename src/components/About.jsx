@@ -1,13 +1,14 @@
-import { FiCheckCircle, FiLayout, FiServer, FiCheckSquare, FiWifi } from "react-icons/fi";
+import { FiCheckCircle } from "react-icons/fi";
 import Reveal from "./Reveal";
 import { about, whatIDo } from "../data/content";
+import { ICONS_3D } from "../lib/icons3d";
 import "./About.css";
 
 const ICONS = {
-  layout: FiLayout,
-  server: FiServer,
-  check: FiCheckSquare,
-  wifi: FiWifi,
+  layout: ICONS_3D.laptop,
+  server: ICONS_3D.gear,
+  check: ICONS_3D.microscope,
+  wifi: ICONS_3D.link,
 };
 
 export default function About() {
@@ -36,18 +37,13 @@ export default function About() {
 
           <Reveal direction="left" delay={0.1}>
             <div className="about__pillars">
-              {whatIDo.map((item, i) => {
-                const Icon = ICONS[item.icon];
-                return (
-                  <div className="about__pillar card" key={i}>
-                    <div className="about__pillar-icon">
-                      <Icon size={20} />
-                    </div>
-                    <h3 className="about__pillar-title">{item.title}</h3>
-                    <p className="about__pillar-desc">{item.description}</p>
-                  </div>
-                );
-              })}
+              {whatIDo.map((item, i) => (
+                <div className="about__pillar card" key={i}>
+                  <img className="about__pillar-icon" src={ICONS[item.icon]} alt="" width={40} height={40} loading="lazy" />
+                  <h3 className="about__pillar-title">{item.title}</h3>
+                  <p className="about__pillar-desc">{item.description}</p>
+                </div>
+              ))}
             </div>
           </Reveal>
         </div>

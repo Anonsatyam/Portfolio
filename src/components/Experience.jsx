@@ -1,8 +1,9 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { FiBriefcase, FiMapPin, FiCalendar } from "react-icons/fi";
+import { FiMapPin, FiCalendar } from "react-icons/fi";
 import Reveal from "./Reveal";
 import { experience } from "../data/content";
+import { ICONS_3D } from "../lib/icons3d";
 import "./Experience.css";
 
 export default function Experience() {
@@ -44,7 +45,7 @@ export default function Experience() {
                   viewport={{ once: true, amount: 0.6 }}
                   transition={{ duration: 0.45, delay: 0.15, ease: [0.34, 1.56, 0.64, 1] }}
                 >
-                  <FiBriefcase size={18} />
+                  <img src={ICONS_3D.briefcase} alt="" width={26} height={26} loading="lazy" />
                 </motion.div>
 
                 <Reveal

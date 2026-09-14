@@ -1,7 +1,14 @@
 import { motion } from "framer-motion";
 import Reveal from "./Reveal";
 import { skills } from "../data/content";
+import { ICONS_3D } from "../lib/icons3d";
 import "./Skills.css";
+
+const CATEGORY_ICONS = {
+  "Languages & Libraries": ICONS_3D.books,
+  "Testing & Automation": ICONS_3D.robot,
+  "Development Tools": ICONS_3D.wrench,
+};
 
 const container = {
   hidden: {},
@@ -30,7 +37,10 @@ export default function Skills() {
           {skills.map((group, gi) => (
             <Reveal key={group.category} delay={gi * 0.1}>
               <div className="skills__group card">
-                <h3 className="skills__category">{group.category}</h3>
+                <div className="skills__category-head">
+                  <img src={CATEGORY_ICONS[group.category]} alt="" width={32} height={32} loading="lazy" />
+                  <h3 className="skills__category">{group.category}</h3>
+                </div>
                 <motion.div
                   className="skills__badges"
                   variants={container}

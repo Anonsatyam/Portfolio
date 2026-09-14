@@ -1,10 +1,17 @@
 .projects__grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1.5rem;
 }
 
+.projects__card-wrap {
+  flex: 1 1 320px;
+  max-width: 380px;
+}
+
 .projects__card {
+  height: 100%;
   padding: clamp(1.5rem, 3vw, 2rem);
   display: flex;
   flex-direction: column;
@@ -19,14 +26,9 @@
 }
 
 .projects__icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
 }
 
 .projects__link {

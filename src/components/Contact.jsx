@@ -1,26 +1,30 @@
-import { FiMail, FiGithub, FiLinkedin } from "react-icons/fi";
+import { FiGithub, FiLinkedin } from "react-icons/fi";
 import Reveal from "./Reveal";
 import { personal } from "../data/content";
+import { ICONS_3D } from "../lib/icons3d";
 import "./Contact.css";
 
 const links = [
   {
-    icon: FiMail,
+    img: ICONS_3D.envelope,
     label: "Email",
     value: personal.email,
     href: `mailto:${personal.email}`,
+    brand: "#ea4335",
   },
   {
-    icon: FiLinkedin,
+    Icon: FiLinkedin,
     label: "LinkedIn",
     value: "in/satyam-js",
     href: personal.linkedin,
+    brand: "#0a66c2",
   },
   {
-    icon: FiGithub,
+    Icon: FiGithub,
     label: "GitHub",
     value: "Anonsatyam",
     href: personal.github,
+    brand: "#181717",
   },
 ];
 
@@ -48,8 +52,12 @@ export default function Contact() {
                 rel="noreferrer"
                 className="contact__card card"
               >
-                <div className="contact__icon">
-                  <link.icon size={24} />
+                <div className="contact__icon" style={{ "--brand": link.brand }}>
+                  {link.img ? (
+                    <img src={link.img} alt="" width={30} height={30} loading="lazy" />
+                  ) : (
+                    <link.Icon size={24} />
+                  )}
                 </div>
                 <div className="contact__label">{link.label}</div>
                 <div className="contact__value">{link.value}</div>

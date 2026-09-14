@@ -99,6 +99,7 @@ export const skills = [
 export const projects = [
   {
     title: "Sarkari Naukri",
+    icon: "newspaper",
     tech: ["Next.js", "React"],
     link: "https://naukari-lac.vercel.app/",
     points: [
@@ -108,6 +109,7 @@ export const projects = [
   },
   {
     title: "Random JSON Data Generator",
+    icon: "package",
     tech: ["VS Code Extension API", "TypeScript"],
     link: "https://marketplace.visualstudio.com/items?itemName=SatyamSingh.randomjson",
     points: [

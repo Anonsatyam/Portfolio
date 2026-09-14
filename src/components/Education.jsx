@@ -1,6 +1,6 @@
-import { FiAward, FiBookOpen } from "react-icons/fi";
 import Reveal from "./Reveal";
 import { education, accomplishments } from "../data/content";
+import { ICONS_3D } from "../lib/icons3d";
 import "./Education.css";
 
 export default function Education() {
@@ -17,7 +17,7 @@ export default function Education() {
         <div className="education__grid">
           <Reveal direction="right">
             <div className="education__card card">
-              <div className="education__icon"><FiBookOpen size={22} /></div>
+              <img className="education__icon" src={ICONS_3D.sparkles} alt="" width={40} height={40} loading="lazy" />
               <div>
                 <h3 className="education__title">{education.degree}</h3>
                 <p className="education__school">{education.school}</p>
@@ -29,7 +29,7 @@ export default function Education() {
           {accomplishments.map((acc, i) => (
             <Reveal direction="left" delay={i * 0.1} key={acc.title}>
               <div className="education__card card">
-                <div className="education__icon education__icon--gold"><FiAward size={22} /></div>
+                <img className="education__icon" src={ICONS_3D.trophy} alt="" width={40} height={40} loading="lazy" />
                 <div>
                   <h3 className="education__title">{acc.title}</h3>
                   <p className="education__school">{acc.detail}</p>

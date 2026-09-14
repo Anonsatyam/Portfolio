@@ -83,13 +83,13 @@ export default function Hero() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.7, delay: 0.5 }}
         >
-          <a href={personal.github} target="_blank" rel="noreferrer" aria-label="GitHub">
+          <a href={personal.github} target="_blank" rel="noreferrer" aria-label="GitHub" className="is-github">
             <FiGithub size={20} />
           </a>
-          <a href={personal.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn">
+          <a href={personal.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="is-linkedin">
             <FiLinkedin size={20} />
           </a>
-          <a href={`mailto:${personal.email}`} aria-label="Email">
+          <a href={`mailto:${personal.email}`} aria-label="Email" className="is-mail">
             <FiMail size={20} />
           </a>
         </motion.div>

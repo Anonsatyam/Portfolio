@@ -16,8 +16,8 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--brand, var(--color-accent)) 12%, white);
+  color: var(--brand, var(--color-accent));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,7 +26,7 @@
 }
 
 .contact__card:hover .contact__icon {
-  background: var(--color-accent);
+  background: var(--brand, var(--color-accent));
   color: #fff;
 }
 

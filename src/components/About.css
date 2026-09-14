@@ -44,12 +44,7 @@
 .about__pillar-icon {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  object-fit: contain;
   margin-bottom: 1rem;
 }
 
