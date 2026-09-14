@@ -100,9 +100,10 @@ export const projects = [
     icon: "newspaper",
     tech: ["Next.js", "React"],
     link: "https://naukari-lac.vercel.app/",
+    previewLabel: "naukari-lac.vercel.app",
     points: [
-      "Built an independent portal aggregating verified Indian government job listings, sourced directly from official notifications.",
-      "Shipped an eligibility checker, smart job filters, results & admit card access, and full English/Hindi multilingual support.",
+      "Independent portal for verified Indian government job listings, sourced from official notifications.",
+      "Eligibility checker, smart filters, and full English/Hindi support.",
     ],
   },
   {
@@ -110,9 +111,10 @@ export const projects = [
     icon: "package",
     tech: ["VS Code Extension API", "TypeScript"],
     link: "https://marketplace.visualstudio.com/items?itemName=SatyamSingh.randomjson",
+    previewLabel: "marketplace.visualstudio.com",
     points: [
-      "Published a VS Code extension that generates random JSON data into a temporary file for quick testing and development — 200+ installs with a 5-star rating on the Marketplace.",
-      "Designed for zero-config use: install and run 'Json Data Generator' straight from the command palette.",
+      "VS Code extension that generates random JSON data for quick testing — 200+ installs, 5-star rating.",
+      "Zero-config: run 'Json Data Generator' straight from the command palette.",
     ],
   },
 ];

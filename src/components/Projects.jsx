@@ -2,9 +2,40 @@ import { FiCheckCircle, FiExternalLink } from "react-icons/fi";
 import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import StaggerGroup, { StaggerItem } from "./StaggerGroup";
+import ProjectMockup from "./ProjectMockup";
 import { projects } from "../data/content";
-import { ICONS_3D } from "../lib/icons3d";
 import "./Projects.css";
+
+// A real screenshot exists for Sarkari Naukri (captured from the live
+// deployed site), so it's used as-is instead of a mockup.
+function SarkariNaukriPreview() {
+  return (
+    <img
+      className="project-mockup__screenshot"
+      src="/projects/sarkari-naukri.jpg"
+      alt="Sarkari Naukri homepage, showing the job search bar and hot listings"
+      loading="lazy"
+    />
+  );
+}
+
+// A real screenshot exists for this one too (captured from its live
+// VS Code Marketplace listing), so it's used as-is instead of a mockup.
+function JsonGeneratorPreview() {
+  return (
+    <img
+      className="project-mockup__screenshot"
+      src="/projects/json-generator.jpg"
+      alt="Random JSON Data Generator listing on the VS Code Marketplace, showing install count and rating"
+      loading="lazy"
+    />
+  );
+}
+
+const PREVIEWS = {
+  "Sarkari Naukri": SarkariNaukriPreview,
+  "Random JSON Data Generator": JsonGeneratorPreview,
+};
 
 export default function Projects() {
   return (
@@ -21,23 +52,16 @@ export default function Projects() {
         </Reveal>
 
         <StaggerGroup className="projects__grid">
-          {projects.map((project) => (
+          {projects.map((project) => {
+            const Preview = PREVIEWS[project.title];
+            return (
             <StaggerItem as="div" key={project.title} className="projects__card-wrap">
               <div className="projects__card card">
-                <div className="projects__top">
-                  <img className="projects__icon" src={ICONS_3D[project.icon]} alt="" width={40} height={40} loading="lazy" />
-                  {project.link && (
-                    <a
-                      href={project.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="projects__link"
-                      aria-label={`Open ${project.title}`}
-                    >
-                      <FiExternalLink size={18} />
-                    </a>
-                  )}
-                </div>
+                {Preview && (
+                  <ProjectMockup url={project.previewLabel}>
+                    <Preview />
+                  </ProjectMockup>
+                )}
 
                 <h3 className="projects__title">{project.title}</h3>
 
@@ -68,7 +92,8 @@ export default function Projects() {
                 )}
               </div>
             </StaggerItem>
-          ))}
+            );
+          })}
         </StaggerGroup>
       </div>
     </section>

@@ -1,0 +1,74 @@
+.project-mockup {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  transition: transform var(--transition-base);
+}
+
+.card:hover .project-mockup {
+  transform: scale(1.015);
+}
+
+.project-mockup__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.project-mockup__dots {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.project-mockup__dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border-strong);
+}
+
+.project-mockup__url {
+  flex: 1;
+  font-size: 0.65rem;
+  font-family: var(--font-sans);
+  color: var(--color-text-soft);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-mockup__body {
+  padding: 0.9rem;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.project-mockup__body:has(.project-mockup__screenshot) {
+  padding: 0;
+  min-height: 0;
+}
+
+.project-mockup__screenshot {
+  display: block;
+  width: 100%;
+  height: 148px;
+  object-fit: cover;
+  object-position: top center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-mockup {
+    transition: none;
+  }
+}
