@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import ScrollProgress from "./components/ScrollProgress";
 import Cursor from "./components/Cursor";
+import Grain from "./components/Grain";
 import Hero from "./components/Hero";
 import About from "./components/About";
 import Experience from "./components/Experience";
@@ -20,6 +21,7 @@ export default function App() {
   return (
     <>
       <Cursor />
+      <Grain />
       <ScrollProgress />
       <Navbar />
       <main>
