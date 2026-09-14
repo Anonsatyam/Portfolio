@@ -1,5 +1,7 @@
 import { FiGithub, FiLinkedin } from "react-icons/fi";
 import Reveal from "./Reveal";
+import AnimatedHeading from "./AnimatedHeading";
+import StaggerGroup, { StaggerItem } from "./StaggerGroup";
 import { personal } from "../data/content";
 import { ICONS_3D } from "../lib/icons3d";
 import "./Contact.css";
@@ -36,7 +38,7 @@ export default function Contact() {
         <Reveal>
           <div className="section-head">
             <span className="eyebrow">Get In Touch</span>
-            <h2 className="section-title">Let's Work Together</h2>
+            <AnimatedHeading as="h2" className="section-title" text="Let's Work Together" />
             <p className="section-subtitle">
               Have a project in mind or just want to connect? I'm always open to
               discussing new opportunities.
@@ -44,31 +46,31 @@ export default function Contact() {
           </div>
         </Reveal>
 
-        <div className="contact__grid">
-          {links.map((link, i) => (
-            <Reveal key={link.label} delay={i * 0.1}>
-              <a
-                href={link.href}
-                target={link.href.startsWith("http") ? "_blank" : undefined}
-                rel="noreferrer"
-                className="contact__card card"
+        <StaggerGroup className="contact__grid">
+          {links.map((link) => (
+            <StaggerItem
+              as="a"
+              key={link.label}
+              className="contact__card card"
+              href={link.href}
+              target={link.href.startsWith("http") ? "_blank" : undefined}
+              rel="noreferrer"
+            >
+              <div
+                className="contact__icon"
+                style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "#ffffff" }}
               >
-                <div
-                  className="contact__icon"
-                  style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "#ffffff" }}
-                >
-                  {link.img ? (
-                    <img src={link.img} alt="" width={30} height={30} loading="lazy" />
-                  ) : (
-                    <link.Icon size={24} />
-                  )}
-                </div>
-                <div className="contact__label">{link.label}</div>
-                <div className="contact__value">{link.value}</div>
-              </a>
-            </Reveal>
+                {link.img ? (
+                  <img src={link.img} alt="" width={30} height={30} loading="lazy" />
+                ) : (
+                  <link.Icon size={24} />
+                )}
+              </div>
+              <div className="contact__label">{link.label}</div>
+              <div className="contact__value">{link.value}</div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGroup>
       </div>
     </section>
   );

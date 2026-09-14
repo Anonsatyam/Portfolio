@@ -1,5 +1,7 @@
 import { FiCheckCircle, FiExternalLink } from "react-icons/fi";
 import Reveal from "./Reveal";
+import AnimatedHeading from "./AnimatedHeading";
+import StaggerGroup, { StaggerItem } from "./StaggerGroup";
 import { projects } from "../data/content";
 import { ICONS_3D } from "../lib/icons3d";
 import "./Projects.css";
@@ -11,16 +13,16 @@ export default function Projects() {
         <Reveal>
           <div className="section-head">
             <span className="eyebrow">My Work</span>
-            <h2 className="section-title">Featured Projects</h2>
+            <AnimatedHeading as="h2" className="section-title" text="Featured Projects" />
             <p className="section-subtitle">
               A mix of enterprise dashboards, side projects, and tools I've designed, built, and shipped.
             </p>
           </div>
         </Reveal>
 
-        <div className="projects__grid">
-          {projects.map((project, i) => (
-            <Reveal key={project.title} delay={i * 0.12} direction="up" className="projects__card-wrap">
+        <StaggerGroup className="projects__grid">
+          {projects.map((project) => (
+            <StaggerItem as="div" key={project.title} className="projects__card-wrap">
               <div className="projects__card card">
                 <div className="projects__top">
                   <img className="projects__icon" src={ICONS_3D[project.icon]} alt="" width={40} height={40} loading="lazy" />
@@ -65,9 +67,9 @@ export default function Projects() {
                   </a>
                 )}
               </div>
-            </Reveal>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerGroup>
       </div>
     </section>
   );

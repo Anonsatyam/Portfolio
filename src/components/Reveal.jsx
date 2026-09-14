@@ -10,7 +10,7 @@ export default function Reveal({
   delay = 0,
   duration = 0.6,
   distance = 28,
-  once = true,
+  once = false,
   amount = 0.2,
   className,
 }) {

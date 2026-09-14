@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import Reveal from "./Reveal";
+import AnimatedHeading from "./AnimatedHeading";
 import { skills } from "../data/content";
 import { ICONS_3D } from "../lib/icons3d";
 import "./Skills.css";
@@ -29,7 +30,7 @@ export default function Skills() {
         <Reveal>
           <div className="section-head">
             <span className="eyebrow">What I Know</span>
-            <h2 className="section-title">Skills &amp; Tools</h2>
+            <AnimatedHeading as="h2" className="section-title" text="Skills & Tools" />
           </div>
         </Reveal>
 
@@ -46,7 +47,7 @@ export default function Skills() {
                   variants={container}
                   initial="hidden"
                   whileInView="show"
-                  viewport={{ once: true, amount: 0.2 }}
+                  viewport={{ once: false, amount: 0.2 }}
                 >
                   {group.items.map((skill) => (
                     <motion.span

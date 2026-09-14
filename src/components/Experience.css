@@ -1,123 +1,85 @@
-/* Wider container just for this section so each branch card gets more
-   horizontal room and wraps to fewer lines. */
-.experience .container {
-  max-width: 1440px;
-}
-
-.experience__timeline {
-  position: relative;
+.experience__stack {
   display: flex;
   flex-direction: column;
-  gap: clamp(2.5rem, 6vw, 4rem);
-  padding-block: 0.5rem;
+  gap: clamp(1.5rem, 4vw, 2.5rem);
 }
 
-/* Central trunk of the journey tree */
-.experience__spine-track {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  width: 3px;
-  transform: translateX(-50%);
-  background: var(--color-accent-soft);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.experience__spine-fill {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(180deg, var(--color-accent), var(--color-accent-dark));
-  transform-origin: top center;
-  border-radius: 999px;
-}
-
-.experience__row {
+.experience__feature {
   position: relative;
-  display: grid;
-  grid-template-columns: 1fr 60px 1fr;
-  align-items: start;
-  gap: clamp(1rem, 3vw, 2rem);
-}
-
-.experience__spacer {
-  grid-column: 1;
-}
-
-.experience__row--right .experience__card-wrap {
-  grid-column: 3;
-}
-
-.experience__row--left .experience__card-wrap {
-  grid-column: 1;
-}
-
-.experience__row--left .experience__spacer {
-  grid-column: 3;
-}
-
-/* The node/branch point on the trunk */
-.experience__node {
-  grid-column: 2;
-  justify-self: center;
-  align-self: start;
-  margin-top: clamp(0.75rem, 2vw, 1.25rem);
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  overflow: hidden;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 0 6px var(--color-bg-alt), 0 0 0 8px var(--color-border), var(--shadow-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.experience__feature:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+}
+
+/* Big faint index numeral — bento-card signature detail */
+.experience__feature-index {
+  position: absolute;
+  top: clamp(0.25rem, 1.5vw, 0.75rem);
+  right: clamp(1rem, 3vw, 2rem);
+  font-size: clamp(4rem, 12vw, 7rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-border);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
+}
+
+/* Soft red glow in the corner, like the Hero background blobs */
+.experience__feature-glow {
+  position: absolute;
+  top: -25%;
+  right: -8%;
+  width: 55%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
+  opacity: 0.14;
+  filter: blur(50px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.experience__feature-top,
+.experience__role,
+.experience__company,
+.experience__points,
+.experience__tags {
+  position: relative;
   z-index: 1;
-  flex-shrink: 0;
 }
 
-.experience__card-wrap {
-  min-width: 0;
-}
-
-.experience__item {
-  padding: clamp(1.5rem, 3vw, 2.25rem);
-}
-
-.experience__top {
+.experience__feature-top {
   display: flex;
-  flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.experience__role {
-  font-size: var(--fs-lg);
-  font-weight: 700;
-  color: var(--color-ink);
-}
-
-.experience__company {
-  color: var(--color-accent);
-  font-weight: 600;
-  font-size: var(--fs-sm);
-  margin-top: 0.15rem;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
 }
 
 .experience__meta {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.3rem;
+  gap: 0.4rem;
   font-size: var(--fs-xs);
   color: var(--color-text-muted);
-  text-align: left;
 }
 
 .experience__meta span {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   justify-content: flex-start;
 }
 
@@ -126,17 +88,35 @@
   flex-shrink: 0;
 }
 
+.experience__role {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  font-weight: 800;
+  color: var(--color-ink);
+  max-width: 760px;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.experience__company {
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: var(--fs-base);
+  margin-bottom: 1.75rem;
+}
+
 .experience__points {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+  max-width: 760px;
+  margin-bottom: 1.75rem;
 }
 
 .experience__points li {
   position: relative;
-  padding-left: 1.1rem;
-  font-size: var(--fs-sm);
+  padding-left: 1.25rem;
+  font-size: var(--fs-base);
+  line-height: 1.6;
   color: var(--color-text-muted);
 }
 
@@ -144,7 +124,7 @@
   content: "";
   position: absolute;
   left: 0;
-  top: 0.55em;
+  top: 0.6em;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -154,61 +134,14 @@
 .experience__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
-/* Mobile / tablet: trunk moves to the left edge, all cards branch right */
-@media (max-width: 760px) {
-  .experience__spine-track {
-    left: 21px;
-    transform: none;
-  }
-
-  .experience__row,
-  .experience__row--right,
-  .experience__row--left {
-    grid-template-columns: 42px 1fr;
-  }
-
-  .experience__spacer {
-    display: none;
-  }
-
-  .experience__row--right .experience__card-wrap,
-  .experience__row--left .experience__card-wrap {
-    grid-column: 2;
-  }
-
-  .experience__node {
-    grid-column: 1;
-  }
-
-  .experience__meta {
-    text-align: left;
-  }
-
-  .experience__meta span {
-    justify-content: flex-start;
-  }
-
-  .experience__top {
+@media (max-width: 640px) {
+  .experience__feature-top {
     flex-direction: column;
   }
-}
-
-@media (max-width: 420px) {
-  .experience__node {
-    width: 36px;
-    height: 36px;
-  }
-
-  .experience__spine-track {
-    left: 17px;
-  }
-
-  .experience__row,
-  .experience__row--right,
-  .experience__row--left {
-    grid-template-columns: 34px 1fr;
+  .experience__feature-index {
+    font-size: clamp(3rem, 18vw, 5rem);
   }
 }
