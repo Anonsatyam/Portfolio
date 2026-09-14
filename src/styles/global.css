@@ -169,6 +169,12 @@ section[id] {
   transform: translateY(-4px);
 }
 
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
 ::selection {
   background: var(--color-accent);
   color: #ffffff;
