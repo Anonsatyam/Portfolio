@@ -76,9 +76,8 @@
 }
 
 .experience__current-badge {
-  position: absolute;
-  top: clamp(1.75rem, 4vw, 2.5rem);
-  right: clamp(1.75rem, 4vw, 2.5rem);
+  display: inline-block;
+  margin-bottom: 1.25rem;
   font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -123,7 +122,6 @@
   font-weight: 700;
   color: var(--color-ink);
   margin-bottom: 0.4rem;
-  padding-right: 5rem;
 }
 
 .experience__company {
@@ -168,16 +166,6 @@
 @media (max-width: 640px) {
   .experience__row {
     gap: 1rem;
-  }
-
-  .experience__current-badge {
-    position: static;
-    display: inline-block;
-    margin-bottom: 1rem;
-  }
-
-  .experience__role {
-    padding-right: 0;
   }
 
   .experience__top {

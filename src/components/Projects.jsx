@@ -56,11 +56,7 @@ export default function Projects() {
           {projects.map((project, i) => {
             const Preview = PREVIEWS[project.title];
             return (
-            <StaggerItem
-              as="div"
-              key={project.title}
-              className={`projects__card-wrap ${i === 0 ? "is-featured" : ""}`}
-            >
+            <StaggerItem as="div" key={project.title} className="projects__card-wrap">
               <div className="projects__card card">
                 <span className="projects__number" aria-hidden="true">
                   {String(i + 1).padStart(2, "0")}

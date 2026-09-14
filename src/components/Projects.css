@@ -1,6 +1,6 @@
 .projects__grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: stretch;
   gap: 1.5rem;
 }
@@ -25,13 +25,6 @@
   opacity: 0.6;
   z-index: 2;
   pointer-events: none;
-}
-
-/* The stronger project gets more visual weight: a wider column (grid
-   above) and a taller preview, instead of two identically-sized cards
-   competing for attention. */
-.projects__card-wrap.is-featured .project-mockup__screenshot {
-  height: 220px;
 }
 
 .projects__title {
@@ -96,8 +89,5 @@
 @media (max-width: 960px) {
   .projects__grid {
     grid-template-columns: 1fr;
-  }
-  .projects__card-wrap.is-featured .project-mockup__screenshot {
-    height: 180px;
   }
 }
