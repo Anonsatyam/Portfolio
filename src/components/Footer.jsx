@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FiArrowUp, FiGithub, FiLinkedin, FiMail, FiDownload } from "react-icons/fi";
 import { personal } from "../data/content";
+import { getMailto } from "../lib/email";
 import { scrollToTop } from "../lib/smoothScroll";
 import "./Footer.css";
 
@@ -66,7 +67,7 @@ export default function Footer() {
           >
             <FiLinkedin size={18} />
           </a>
-          <a href={`mailto:${personal.email}`} aria-label="Email" className="is-mail">
+          <a href={getMailto()} aria-label="Email" className="is-mail">
             <FiMail size={18} />
           </a>
           <a href={personal.resumeUrl} download className="footer__resume">

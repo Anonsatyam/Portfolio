@@ -3,14 +3,15 @@ import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import StaggerGroup, { StaggerItem } from "./StaggerGroup";
 import { personal } from "../data/content";
+import { getEmail, getMailto } from "../lib/email";
 import "./Contact.css";
 
 const links = [
   {
     Icon: FiMail,
     label: "Email",
-    value: personal.email,
-    href: `mailto:${personal.email}`,
+    value: getEmail(),
+    href: getMailto(),
     brand: "#ea4335",
   },
   {

@@ -3,6 +3,7 @@ import { FiGithub, FiLinkedin, FiArrowDown, FiMail } from "react-icons/fi";
 import { personal, experience, availability } from "../data/content";
 import { scrollToId } from "../lib/smoothScroll";
 import { prefersReducedMotion } from "../lib/motion";
+import { getMailto } from "../lib/email";
 import BlurReveal from "./BlurReveal";
 import MaskReveal from "./MaskReveal";
 import HangingIDCard from "./HangingIDCard";
@@ -131,7 +132,7 @@ export default function Hero() {
               <a href={personal.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="is-linkedin">
                 <FiLinkedin size={20} />
               </a>
-              <a href={`mailto:${personal.email}`} aria-label="Email" className="is-mail">
+              <a href={getMailto()} aria-label="Email" className="is-mail">
                 <FiMail size={20} />
               </a>
             </BlurReveal>

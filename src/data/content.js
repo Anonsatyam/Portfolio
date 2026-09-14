@@ -5,7 +5,9 @@ export const personal = {
   name: "Satyam Kumar",
   role: "Full Stack Developer — Angular, React.js & Java",
   location: "Noida, India",
-  email: "satyamdeveloper98@gmail.com",
+  // The address deliberately does not live here as a literal — see
+  // lib/email.js, so it never ships as a plain string for harvesters.
+
   linkedin: "https://in.linkedin.com/in/satyam-js",
   github: "https://github.com/Anonsatyam",
   instagram: "https://www.instagram.com/satyam.js",
