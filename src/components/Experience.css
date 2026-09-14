@@ -165,22 +165,12 @@
     grid-template-columns: 1fr;
   }
 
+  /* The jump-nav sidebar became a horizontally-scrolling row of wide
+     pills with no scroll affordance — it just looked like cut-off,
+     broken text. With only two roles, a jump nav isn't earning its
+     keep on mobile anyway; the cards stack and scroll fine without it. */
   .experience__sidebar {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-    gap: 0.75rem;
-    padding-bottom: 0.5rem;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .experience__sidebar-item {
-    flex-shrink: 0;
-    align-items: center;
-  }
-
-  .experience__sidebar-dot {
-    margin-top: 0;
+    display: none;
   }
 
   .experience__top {
