@@ -2,6 +2,7 @@ import { FiGithub, FiLinkedin, FiArrowDown, FiMail } from "react-icons/fi";
 import { personal, experience } from "../data/content";
 import { scrollToId } from "../lib/smoothScroll";
 import BlurReveal from "./BlurReveal";
+import MaskReveal from "./MaskReveal";
 import HangingIDCard from "./HangingIDCard";
 import MagneticButton from "./MagneticButton";
 import "./Hero.css";
@@ -31,12 +32,12 @@ export default function Hero() {
             </BlurReveal>
 
             <h1 className="hero__name">
-              <BlurReveal as="span" className="hero__name-line" delay={0.1}>
+              <MaskReveal className="hero__name-line" delay={0.1}>
                 {firstName}
-              </BlurReveal>
-              <BlurReveal as="span" className="hero__name-line" delay={0.18}>
+              </MaskReveal>
+              <MaskReveal className="hero__name-line" delay={0.22}>
                 {lastName}
-              </BlurReveal>
+              </MaskReveal>
             </h1>
 
             <BlurReveal as="h2" className="hero__role" delay={0.3}>

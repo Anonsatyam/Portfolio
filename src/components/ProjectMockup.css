@@ -59,6 +59,10 @@
   min-height: 0;
 }
 
+.project-mockup__parallax {
+  display: block;
+}
+
 .project-mockup__screenshot {
   display: block;
   width: 100%;
