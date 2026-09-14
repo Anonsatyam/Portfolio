@@ -58,17 +58,18 @@ export default function Projects() {
             return (
             <StaggerItem as="div" key={project.title} className="projects__card-wrap">
               <div className="projects__card card">
-                <span className="projects__number" aria-hidden="true">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-
                 {Preview && (
                   <ProjectMockup url={project.previewLabel}>
                     <Preview />
                   </ProjectMockup>
                 )}
 
-                <h3 className="projects__title">{project.title}</h3>
+                <h3 className="projects__title">
+                  <span className="projects__number" aria-hidden="true">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  {project.title}
+                </h3>
 
                 {project.summary && <p className="projects__summary">{project.summary}</p>}
 

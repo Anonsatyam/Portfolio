@@ -13,18 +13,16 @@
   flex-direction: column;
 }
 
+/* Sits with the title rather than over the screenshot, where it was
+   fighting the browser chrome and barely legible. Mirrors the section
+   numbering used in the eyebrows. */
 .projects__number {
-  position: absolute;
-  top: clamp(1rem, 2vw, 1.5rem);
-  right: clamp(1.25rem, 3vw, 2rem);
   font-family: var(--font-display);
-  font-size: clamp(1.5rem, 3vw, 2.25rem);
-  font-weight: 800;
-  line-height: 1;
-  color: var(--color-border-strong);
-  opacity: 0.6;
-  z-index: 2;
-  pointer-events: none;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  margin-right: 0.7rem;
+  padding-right: 0.7rem;
+  border-right: 1px solid var(--color-border-strong);
 }
 
 .projects__title {
