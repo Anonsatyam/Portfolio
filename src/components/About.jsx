@@ -3,7 +3,6 @@ import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import StaggerGroup, { StaggerItem } from "./StaggerGroup";
 import Icon from "../lib/icons";
-import StatStrip from "./StatStrip";
 import { about, whatIDo } from "../data/content";
 import "./About.css";
 
@@ -11,8 +10,6 @@ export default function About() {
   return (
     <section id="about" className="section about">
       <div className="container">
-        <StatStrip />
-
         <Reveal variant="heading">
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">01</span>About Me</span>

@@ -3,11 +3,8 @@ import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import Icon from "../lib/icons";
 import Marquee from "./Marquee";
-import { skills } from "../data/content";
+import { skills, marqueeStack } from "../data/content";
 import "./Skills.css";
-
-// The core stack, called out again as a moving band under the grid.
-const MARQUEE_ITEMS = skills.flatMap((g) => g.items.filter((i) => i.core).map((i) => i.name));
 
 const container = {
   hidden: {},
@@ -28,7 +25,7 @@ export default function Skills() {
             <span className="eyebrow"><span className="eyebrow__num">03</span>What I Know</span>
             <AnimatedHeading as="h2" className="section-title" text="The Stack I Build With" />
             <p className="section-subtitle">
-              Highlighted below is what I work in day to day — the rest I've shipped with and can pick back up.
+              The languages, frameworks and tools I've built and shipped production software with.
             </p>
           </div>
         </Reveal>
@@ -50,12 +47,12 @@ export default function Skills() {
                 >
                   {group.items.map((skill) => (
                     <motion.span
-                      key={skill.name}
-                      className={`skills__badge ${skill.core ? "is-core" : ""}`}
+                      key={skill}
+                      className="skills__badge"
                       variants={item}
                       whileHover={{ scale: 1.06, y: -2 }}
                     >
-                      {skill.name}
+                      {skill}
                     </motion.span>
                   ))}
                 </motion.div>
@@ -66,7 +63,7 @@ export default function Skills() {
       </div>
 
       <div className="skills__marquee">
-        <Marquee items={MARQUEE_ITEMS} speed={32} />
+        <Marquee items={marqueeStack} speed={32} />
       </div>
     </section>
   );

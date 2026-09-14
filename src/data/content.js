@@ -20,15 +20,6 @@ export const availability = {
   label: "Open to Full Stack / Frontend roles",
 };
 
-// Every figure here is pulled from the experience bullets below — no
-// number appears on the site that isn't backed by real work.
-export const stats = [
-  { value: 75, suffix: "%", label: "Fewer integration issues", detail: "after building out CI/CD" },
-  { value: 40, suffix: "%", label: "Faster data retrieval", detail: "across SIM service APIs" },
-  { value: 30, suffix: "%", label: "Faster load times", detail: "from NgRx optimisation" },
-  { value: 200, suffix: "+", label: "Extension installs", detail: "5-star rated on the Marketplace" },
-];
-
 export const about = {
   summary:
     "Full Stack Developer building fast, scalable interfaces in Angular and React.js, backed by Java APIs — currently shipping SIM, eSIM, and IoT device management software.",
@@ -80,67 +71,86 @@ export const experience = [
     role: "Software Engineer III — OTA Cloud",
     period: "Aug 2020 — Sep 2025",
     location: "Noida, India",
+    // Shown as a metric row inside this role's card, so each figure is
+    // read against the work that produced it.
+    metrics: [
+      { value: 75, suffix: "%", label: "fewer integration issues" },
+      { value: 40, suffix: "%", label: "faster data retrieval" },
+      { value: 30, suffix: "%", label: "faster load times" },
+    ],
+    // The figures live in `metrics` above — these describe the work
+    // itself so the same numbers aren't stated twice in one card.
     points: [
-      "Spearheaded the design and development of the COTA dashboard using Angular 10, leading migration to Angular 14 and 18 to enhance performance and maintainability.",
-      "Developed a CI/CD pipeline doubling release frequency and cutting integration issues by 75%.",
-      "Engineered and deployed robust Java-based APIs targeting SIM service functionalities, improving data retrieval efficiency by 40% while ensuring seamless integration with existing systems.",
-      "Optimized NgRx for faster data retrieval, cutting load times by 30%.",
+      "Spearheaded the design and development of the COTA dashboard in Angular 10, then led its migration to Angular 14 and 18.",
+      "Built the CI/CD pipeline that doubled release frequency.",
+      "Engineered and deployed Java-based APIs for SIM service functionality, integrating cleanly with the existing systems.",
+      "Optimised NgRx state management across the dashboard.",
     ],
     tags: ["Angular", "Java", "NgRx", "Robot Framework", "CI/CD"],
   },
 ];
 
-// `core: true` marks the stack actually worked in day to day, so the
-// UI can weight it instead of showing thirty identical chips.
 export const skills = [
   {
     category: "Frontend",
     icon: "code",
     items: [
-      { name: "React.js", core: true },
-      { name: "Angular", core: true },
-      { name: "TypeScript", core: true },
-      { name: "JavaScript", core: true },
-      { name: "Next.js" },
-      { name: "RxJS" },
-      { name: "NgRx" },
-      { name: "HTML" },
-      { name: "CSS" },
-      { name: "SCSS" },
-      { name: "Tailwind CSS" },
-      { name: "Material UI" },
-      { name: "Bootstrap" },
+      "React.js",
+      "Angular",
+      "TypeScript",
+      "JavaScript",
+      "Next.js",
+      "RxJS",
+      "NgRx",
+      "HTML",
+      "CSS",
+      "SCSS",
+      "Tailwind CSS",
+      "Material UI",
+      "Bootstrap",
     ],
   },
   {
     category: "Backend & Testing",
     icon: "server",
     items: [
-      { name: "Java", core: true },
-      { name: "REST APIs", core: true },
-      { name: "Playwright", core: true },
-      { name: "Robot Framework" },
-      { name: "Selenium" },
-      { name: "Cypress" },
-      { name: "Karma" },
-      { name: "Jasmine" },
+      "Java",
+      "REST APIs",
+      "Playwright",
+      "Robot Framework",
+      "Selenium",
+      "Cypress",
+      "Karma",
+      "Jasmine",
     ],
   },
   {
     category: "Tooling & Delivery",
     icon: "tool",
     items: [
-      { name: "CI/CD", core: true },
-      { name: "Git", core: true },
-      { name: "Docker" },
-      { name: "Kubernetes" },
-      { name: "Jenkins" },
-      { name: "WebPack" },
-      { name: "Gulp" },
-      { name: "Grunt" },
-      { name: "Mercurial" },
+      "CI/CD",
+      "Git",
+      "Docker",
+      "Kubernetes",
+      "Jenkins",
+      "WebPack",
+      "Gulp",
+      "Grunt",
+      "Mercurial",
     ],
   },
+];
+
+// Shown in the marquee under the skills grid.
+export const marqueeStack = [
+  "React.js",
+  "Angular",
+  "TypeScript",
+  "Java",
+  "Next.js",
+  "Playwright",
+  "NgRx",
+  "CI/CD",
 ];
 
 export const projects = [

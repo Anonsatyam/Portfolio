@@ -63,18 +63,8 @@ input, textarea {
   background: var(--color-bg-alt);
 }
 
-/* Sections used to butt straight up against each other. A hairline that
-   fades out toward the edges gives each one a defined start without
-   drawing a hard rule across the page. */
-.section + .section::before,
-.section--alt + .section::before,
-main > .section:not(#hero)::before {
-  content: "";
-  display: block;
-  height: 1px;
-  margin-bottom: var(--space-section);
-  margin-top: calc(-1 * var(--space-section));
-  background: linear-gradient(90deg, transparent, var(--color-border) 45%, var(--color-border) 55%, transparent);
+.section {
+  position: relative;
 }
 
 section[id] {

@@ -4,6 +4,7 @@ import { FiMapPin, FiCalendar } from "react-icons/fi";
 import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import Icon from "../lib/icons";
+import MetricRow from "./MetricRow";
 import { experience } from "../data/content";
 import "./Experience.css";
 
@@ -58,6 +59,8 @@ export default function Experience() {
 
                     <h3 className="experience__role">{job.role}</h3>
                     <p className="experience__company">{job.company}</p>
+
+                    <MetricRow metrics={job.metrics} />
 
                     <ul className="experience__points">
                       {job.points.map((p, idx) => (
