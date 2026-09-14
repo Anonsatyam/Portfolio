@@ -1,3 +1,9 @@
+/* Wider container just for this section so each branch card gets more
+   horizontal room and wraps to fewer lines. */
+.experience .container {
+  max-width: 1440px;
+}
+
 .experience__timeline {
   position: relative;
   display: flex;
