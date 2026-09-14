@@ -7,7 +7,7 @@
 
 .about__summary {
   color: var(--color-text-muted);
-  font-size: var(--fs-lg);
+  font-size: var(--fs-md);
   margin-bottom: 1.75rem;
 }
 

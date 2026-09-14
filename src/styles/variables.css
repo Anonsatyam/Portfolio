@@ -22,6 +22,7 @@
   --fs-xs: clamp(0.75rem, 0.72rem + 0.15vw, 0.85rem);
   --fs-sm: clamp(0.875rem, 0.84rem + 0.2vw, 1rem);
   --fs-base: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --fs-md: clamp(1.0625rem, 1rem + 0.25vw, 1.2rem);
   --fs-lg: clamp(1.125rem, 1.05rem + 0.35vw, 1.35rem);
   --fs-xl: clamp(1.35rem, 1.2rem + 0.6vw, 1.75rem);
   --fs-2xl: clamp(1.75rem, 1.5rem + 1vw, 2.5rem);
