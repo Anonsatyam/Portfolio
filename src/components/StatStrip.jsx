@@ -41,9 +41,16 @@ function Stat({ value, suffix, label, detail, index }) {
 export default function StatStrip() {
   return (
     <div className="stat-strip">
-      {stats.map((s, i) => (
-        <Stat key={s.label} {...s} index={i} />
-      ))}
+      {/* Without this the four figures float between the Hero and the
+          About heading with nothing saying what they belong to. Worded
+          to cover both the Thales work and the side project, since the
+          installs figure isn't from the day job. */}
+      <p className="stat-strip__label">Measured results from my work</p>
+      <div className="stat-strip__grid">
+        {stats.map((s, i) => (
+          <Stat key={s.label} {...s} index={i} />
+        ))}
+      </div>
     </div>
   );
 }
