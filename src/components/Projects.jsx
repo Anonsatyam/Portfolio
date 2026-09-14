@@ -3,6 +3,7 @@ import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import StaggerGroup, { StaggerItem } from "./StaggerGroup";
 import ProjectMockup from "./ProjectMockup";
+import MagneticButton from "./MagneticButton";
 import { projects } from "../data/content";
 import "./Projects.css";
 
@@ -52,11 +53,19 @@ export default function Projects() {
         </Reveal>
 
         <StaggerGroup className="projects__grid">
-          {projects.map((project) => {
+          {projects.map((project, i) => {
             const Preview = PREVIEWS[project.title];
             return (
-            <StaggerItem as="div" key={project.title} className="projects__card-wrap">
+            <StaggerItem
+              as="div"
+              key={project.title}
+              className={`projects__card-wrap ${i === 0 ? "is-featured" : ""}`}
+            >
               <div className="projects__card card">
+                <span className="projects__number" aria-hidden="true">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+
                 {Preview && (
                   <ProjectMockup url={project.previewLabel}>
                     <Preview />
@@ -81,14 +90,16 @@ export default function Projects() {
                 </ul>
 
                 {project.link && (
-                  <a
-                    href={project.link}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="projects__cta"
-                  >
-                    View Project <FiExternalLink size={14} />
-                  </a>
+                  <MagneticButton className="projects__cta-wrap">
+                    <a
+                      href={project.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="projects__cta"
+                    >
+                      View Project <FiExternalLink size={14} />
+                    </a>
+                  </MagneticButton>
                 )}
               </div>
             </StaggerItem>

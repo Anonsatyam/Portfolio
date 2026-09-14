@@ -7,7 +7,7 @@
 }
 
 .card:hover .project-mockup {
-  transform: scale(1.015);
+  transform: scale(1.01);
 }
 
 .project-mockup__bar {
@@ -65,10 +65,18 @@
   height: 148px;
   object-fit: cover;
   object-position: top center;
+  transition: transform 0.5s var(--ease-premium, ease-out);
+}
+
+/* A slightly deeper zoom on the image than the frame around it, for a
+   layered, parallax-like feel on hover rather than a flat scale-up. */
+.card:hover .project-mockup__screenshot {
+  transform: scale(1.08);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .project-mockup {
+  .project-mockup,
+  .project-mockup__screenshot {
     transition: none;
   }
 }

@@ -69,6 +69,18 @@ export default function HangingIDCard() {
     py.set(0);
   };
 
+  // Touch devices never fire hover, so a tap triggers the same bounce
+  // for a moment instead — the spring settling back down IS the
+  // feedback, same as a hover-leave would give on desktop.
+  const tapTimeout = useRef(null);
+  useEffect(() => () => clearTimeout(tapTimeout.current), []);
+  const onTap = () => {
+    if (reduced || !isCoarse) return;
+    setHovered(true);
+    clearTimeout(tapTimeout.current);
+    tapTimeout.current = setTimeout(() => setHovered(false), 900);
+  };
+
   return (
     <div
       className={`id-card__wrap ${reduced ? "id-card__wrap--static" : ""}`}
@@ -76,6 +88,7 @@ export default function HangingIDCard() {
       onMouseEnter={() => setHovered(true)}
       onMouseMove={onCardMove}
       onMouseLeave={onCardLeave}
+      onClick={onTap}
     >
       <div className="id-card__mount" aria-hidden="true" />
       <motion.svg

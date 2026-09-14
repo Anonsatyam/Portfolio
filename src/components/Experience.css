@@ -1,88 +1,92 @@
-.experience__layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: clamp(2rem, 5vw, 4rem);
-  align-items: start;
-}
-
-/* Pure CSS sticky — browser-native, no JS pin/spacer math, so it can't
-   drift out of sync the way a scroll-jacked pin could. */
-.experience__sidebar {
-  position: sticky;
-  top: clamp(88px, 14vh, 130px);
+.experience__timeline {
+  --exp-gap: clamp(2rem, 5vw, 3rem);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--exp-gap);
 }
 
-.experience__sidebar-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
-  border-radius: var(--radius-md);
-  text-align: left;
-  border: 1px solid transparent;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-
-.experience__sidebar-item:hover {
-  background: var(--color-surface);
-}
-
-.experience__sidebar-item.is-active {
-  background: var(--color-surface);
-  border-color: var(--color-border);
-}
-
-.experience__sidebar-dot {
-  width: 10px;
-  height: 10px;
-  margin-top: 0.3rem;
-  border-radius: 50%;
-  background: var(--color-border);
-  flex-shrink: 0;
-  transition: background var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-.experience__sidebar-item.is-active .experience__sidebar-dot {
+/* Accent progress line, overlaid on the per-row grey track below,
+   scales in with scroll (no pin, just a passive read of position). */
+.experience__timeline-fill {
+  position: absolute;
+  left: 10px;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
   background: var(--color-accent);
+  transform-origin: top;
+  z-index: 0;
+}
+
+.experience__row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.experience__rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+/* Grey static track, continuous across the row gap via a negative
+   bottom offset matched to --exp-gap. */
+.experience__rail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: calc(-1 * var(--exp-gap));
+  left: 50%;
+  width: 2px;
+  background: var(--color-border);
+  transform: translateX(-50%);
+}
+
+.experience__row:last-child .experience__rail::before {
+  display: none;
+}
+
+.experience__dot {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  margin-top: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-bg-alt);
+  border: 2px solid var(--color-border-strong);
+  transition: background var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.experience__row.is-current .experience__dot {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   box-shadow: 0 0 0 4px var(--color-accent-soft);
 }
 
-.experience__sidebar-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.experience__sidebar-role {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  transition: color var(--transition-fast);
-}
-
-.experience__sidebar-item.is-active .experience__sidebar-role {
-  color: var(--color-ink);
-}
-
-.experience__sidebar-period {
-  font-size: var(--fs-xs);
-  color: var(--color-text-soft);
-}
-
-.experience__details {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(2rem, 5vw, 3rem);
-  min-width: 0;
-}
-
 .experience__item {
-  scroll-margin-top: clamp(88px, 14vh, 130px);
+  position: relative;
+  flex: 1;
+  min-width: 0;
   padding: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.experience__current-badge {
+  position: absolute;
+  top: clamp(1.75rem, 4vw, 2.5rem);
+  right: clamp(1.75rem, 4vw, 2.5rem);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
 }
 
 .experience__top {
@@ -119,6 +123,7 @@
   font-weight: 700;
   color: var(--color-ink);
   margin-bottom: 0.4rem;
+  padding-right: 5rem;
 }
 
 .experience__company {
@@ -160,17 +165,19 @@
   gap: 0.5rem;
 }
 
-@media (max-width: 800px) {
-  .experience__layout {
-    grid-template-columns: 1fr;
+@media (max-width: 640px) {
+  .experience__row {
+    gap: 1rem;
   }
 
-  /* The jump-nav sidebar became a horizontally-scrolling row of wide
-     pills with no scroll affordance — it just looked like cut-off,
-     broken text. With only two roles, a jump nav isn't earning its
-     keep on mobile anyway; the cards stack and scroll fine without it. */
-  .experience__sidebar {
-    display: none;
+  .experience__current-badge {
+    position: static;
+    display: inline-block;
+    margin-bottom: 1rem;
+  }
+
+  .experience__role {
+    padding-right: 0;
   }
 
   .experience__top {

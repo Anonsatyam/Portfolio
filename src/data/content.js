@@ -16,12 +16,11 @@ export const personal = {
 
 export const about = {
   summary:
-    "Software Engineer specializing in Angular, React.js, Java, and full-stack development. Currently working as a Full Stack Developer, building scalable web applications and robust APIs for SIM, eSIM, and IoT device management, with a strong focus on performance, maintainability, and intuitive user experiences.",
+    "Full Stack Developer building fast, scalable interfaces in Angular and React.js, backed by Java APIs — currently shipping SIM, eSIM, and IoT device management software.",
   highlights: [
-    "I care about clean, maintainable code as much as working features — the kind the next developer (or future me) can actually read.",
-    "I like owning problems end-to-end: UI, backend APIs, and the test automation that keeps it all honest.",
+    "I care about clean, maintainable code as much as working features — the kind the next developer can actually read.",
+    "I own problems end-to-end: UI, backend APIs, and the test automation that keeps it all honest.",
     "Right now I'm deep in IoT and eSIM connectivity, building on GSMA SGP.22/32 standards.",
-    "Outside my day job, I ship my own tools too — like a VS Code extension used by 200+ developers.",
   ],
 };
 
@@ -80,8 +79,8 @@ export const skills = [
   {
     category: "Languages & Libraries",
     items: [
-      "HTML", "CSS", "SCSS", "JavaScript", "TypeScript", "Java",
-      "Angular", "React.js", "Next.js", "RxJS", "NgRx", "Bootstrap", "Material UI", "Tailwind CSS",
+      "React.js", "Angular", "Next.js", "JavaScript", "TypeScript",
+      "HTML", "CSS", "SCSS", "RxJS", "NgRx", "Bootstrap", "Material UI", "Tailwind CSS", "Java",
     ],
   },
   {
