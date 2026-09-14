@@ -60,8 +60,8 @@ export default function Experience() {
                         <p className="experience__company">{job.company}</p>
                       </div>
                       <div className="experience__meta">
-                        <span><FiCalendar size={14} /> {job.period}</span>
-                        <span><FiMapPin size={14} /> {job.location}</span>
+                        <span><FiCalendar className="experience__meta-icon" size={14} /> {job.period}</span>
+                        <span><FiMapPin className="experience__meta-icon" size={14} /> {job.location}</span>
                       </div>
                     </div>
 

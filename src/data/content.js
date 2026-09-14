@@ -62,13 +62,14 @@ export const experience = [
   },
   {
     company: "Thales",
-    role: "Software Engineer III — OTA Cloud Dashboard",
+    role: "Software Engineer III — OTA Cloud",
     period: "Aug 2020 — Sep 2025",
     location: "Noida, India",
     points: [
-      "Spearheaded the COTA dashboard, migrating it from Angular 10 to Angular 14 and 18 for better performance and maintainability.",
-      "Built a CI/CD pipeline that doubled release frequency and cut integration issues by 75%.",
-      "Engineered Java-based APIs for SIM services, improving data retrieval efficiency by 40%.",
+      "Spearheaded the design and development of the COTA dashboard using Angular 10, leading migration to Angular 14 and 18 to enhance performance and maintainability.",
+      "Developed a CI/CD pipeline doubling release frequency and cutting integration issues by 75%.",
+      "Engineered and deployed robust Java-based APIs targeting SIM service functionalities, improving data retrieval efficiency by 40% while ensuring seamless integration with existing systems.",
+      "Optimized NgRx for faster data retrieval, cutting load times by 30%.",
     ],
     tags: ["Angular", "Java", "NgRx", "Robot Framework", "CI/CD"],
   },
