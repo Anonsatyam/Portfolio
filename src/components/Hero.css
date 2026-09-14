@@ -49,6 +49,21 @@
   left: -6%;
 }
 
+/* Cursor-tracking glow — desktop only (see the mousemove guard in
+   Hero.jsx), opacity-gated so it's invisible until the pointer is
+   actually over the section, and off entirely under reduced motion. */
+.hero__spotlight {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    480px circle at var(--mx, 50%) var(--my, 50%),
+    var(--color-accent-soft) 0%,
+    transparent 60%
+  );
+}
+
 .hero__inner {
   position: relative;
   z-index: 1;
@@ -82,6 +97,7 @@
 }
 
 .hero__name {
+  position: relative;
   font-family: var(--font-display);
   font-size: clamp(3rem, 8.5vw, 6.5rem);
   font-weight: 700;
@@ -91,8 +107,33 @@
   margin-block: 0.15em 0.2em;
 }
 
+.hero__name-white {
+  display: block;
+}
+
 .hero__name-line {
   display: block;
+}
+
+/* A red duplicate of the name, stacked exactly on top of the white
+   one, revealed only inside a small circle at the cursor via mask —
+   the "liquid" red-on-white swap as the pointer moves across it.
+   Defaults to off-screen coordinates so nothing shows until the mouse
+   actually reaches it (see the Hero.jsx mousemove handler). */
+.hero__name-liquid {
+  display: block;
+  position: absolute;
+  inset: 0;
+  color: var(--color-accent);
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(120px circle at var(--nx, -999px) var(--ny, -999px), #000 0%, transparent 70%);
+  mask-image: radial-gradient(120px circle at var(--nx, -999px) var(--ny, -999px), #000 0%, transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__name-liquid {
+    display: none;
+  }
 }
 
 .hero__role {

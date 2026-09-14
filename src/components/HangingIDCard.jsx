@@ -1,199 +1,278 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { animate, motion, useMotionValue, useMotionValueEvent, useSpring, useTransform } from "framer-motion";
 import { FiMapPin } from "react-icons/fi";
 import { personal } from "../data/content";
 import { prefersReducedMotion } from "../lib/motion";
 import "./HangingIDCard.css";
 
-const CARD_SPRING = { stiffness: 140, damping: 16, mass: 1 };
-const DRAG_SPRING = { stiffness: 220, damping: 18, mass: 0.8 };
-// Shared by the lanyard coil and the card's hover bounce so they move
-// as one attached spring system instead of two independent animations.
-const HOVER_SPRING = { type: "spring", stiffness: 260, damping: 7, mass: 0.7 };
-// Stacked ellipses read as a coiled spring viewed side-on (like a real
-// compression spring), instead of a flat zigzag line. The terminal
-// loop is left open and curls into a hook — the spring's own last
-// wind forms the hook, not a separate shape tacked on after it — so
-// it's the same stroke, same element, same transform as the coil.
-const COIL_LOOPS = Array.from({ length: 7 }, (_, i) => 3 + i * 5);
-const HOOK_PATH = "M3 38 A7 3 0 1 1 17 38 A5 5 0 0 1 9 46";
+/**
+ * Geometry, in px, all measured from the mount point (the anchor dot):
+ *
+ *   y = 0            anchor / mount dot
+ *   y = springLength hook centre  == the card's slot centre
+ *   card top edge    = hook centre - SLOT_INSET
+ *
+ * Everything below derives the spring's length and angle from the SAME
+ * motion values that move the card, so the two can't drift apart: the
+ * card's position IS the spring's end point, by construction.
+ */
+const REST_LENGTH = 56; // anchor -> slot centre when hanging at rest
+const SLOT_INSET = 11; // slot centre, below the card's top edge
+const MIN_LENGTH = 18; // coil never compresses past this
+// Capped so the coil can't be pulled out into a flat wave — past a
+// certain pitch a helix stops reading as a spring at all.
+const MAX_DRAG_X = 80;
+const MAX_DRAG_UP = 34;
+const MAX_DRAG_DOWN = 85;
+
+const COIL_TURNS = 9;
+const COIL_RX = 7.5; // coil radius
+const COIL_RY = 3; // how much each turn is squashed by perspective
+const COIL_TOP_PAD = 2; // wire starts just under the anchor dot
+const COIL_BOTTOM_PAD = 15; // wire ends exactly where the hook shaft begins
+const COIL_CX = COIL_RX + 2.5;
+const COIL_STEPS = COIL_TURNS * 18;
+
+const ENTRANCE_SPRING = { type: "spring", stiffness: 170, damping: 12, mass: 1 };
+const RELEASE_SPRING = { type: "spring", stiffness: 240, damping: 11, mass: 0.9 };
+const BOUNCE_SPRING = { type: "spring", stiffness: 260, damping: 9, mass: 0.7 };
+const SWAY_SPRING = { stiffness: 140, damping: 16, mass: 1 };
+
+const DEG = 180 / Math.PI;
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+/**
+ * One continuous wire, not a stack of separate rings — a real spring is
+ * a single helix, so stretching it must spread the turns apart while
+ * they stay joined. This is the 2D projection of that helix:
+ *   x = cx + rx·sin(t)
+ *   y = pitch·t + ry·cos(t)
+ * The cos term on y is what tilts each turn into a ring instead of
+ * leaving a flat zigzag.
+ */
+function coilPath(length) {
+  const span = Math.max(length - COIL_TOP_PAD - COIL_BOTTOM_PAD, 4);
+  let d = "";
+  for (let i = 0; i <= COIL_STEPS; i += 1) {
+    const t = (i / COIL_STEPS) * COIL_TURNS * Math.PI * 2;
+    const x = COIL_CX + COIL_RX * Math.sin(t);
+    const y = COIL_TOP_PAD + (span * i) / COIL_STEPS + COIL_RY * Math.cos(t);
+    d += `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+  }
+  return d;
+}
 
 export default function HangingIDCard() {
   const wrapRef = useRef(null);
   const [reduced, setReduced] = useState(false);
   const [isCoarse, setIsCoarse] = useState(false);
-  const [hovered, setHovered] = useState(false);
+
+  // --- where the card is: one source of truth ---
+  const dragX = useMotionValue(0);
+  const dragY = useMotionValue(0);
+  const bounceY = useMotionValue(0);
+
+  const pointerX = useMotionValue(0);
+  const pointerY = useMotionValue(0);
+  const swayX = useSpring(useTransform(pointerX, [-60, 60], [-14, 14]), SWAY_SPRING);
+  const swayY = useSpring(useTransform(pointerY, [-60, 60], [-6, 6]), SWAY_SPRING);
+
+  const totalX = useTransform([dragX, swayX], ([d, s]) => d + s);
+  const totalY = useTransform([dragY, swayY, bounceY], ([d, s, b]) => d + s + b);
+
+  // --- the spring, derived from exactly those numbers ---
+  const springLength = useTransform([totalX, totalY], ([x, y]) =>
+    Math.max(MIN_LENGTH, Math.hypot(x, Math.max(MIN_LENGTH, REST_LENGTH + y)))
+  );
+  const springAngle = useTransform([totalX, totalY], ([x, y]) =>
+    -Math.atan2(x, Math.max(MIN_LENGTH, REST_LENGTH + y)) * DEG
+  );
+  // A hanging object swings to follow its tether, but lags a little.
+  const cardTilt = useTransform(springAngle, (a) => a * 0.55);
+
+  // 3D tilt from pointer proximity, kept separate from the swing.
+  const tiltY = useTransform(swayX, [-14, 14], [-10, 10]);
+  const tiltX = useTransform(swayY, [-6, 6], [8, -8]);
+
+  const dragging = useRef(false);
+  const origin = useRef({ x: 0, y: 0 });
+  const releaseX = useRef(null);
+  const releaseY = useRef(null);
+
+  // Redraw the wire whenever the spring's length changes. Writing the
+  // attribute directly keeps it off React's render path entirely.
+  const coilRef = useRef(null);
+  useMotionValueEvent(springLength, "change", (L) => {
+    coilRef.current?.setAttribute("d", coilPath(L));
+  });
+  useEffect(() => {
+    coilRef.current?.setAttribute("d", coilPath(springLength.get()));
+  }, [springLength]);
 
   useEffect(() => {
-    setReduced(prefersReducedMotion());
-    setIsCoarse(window.matchMedia("(pointer: coarse)").matches);
-  }, []);
+    const r = prefersReducedMotion();
+    const coarse = !window.matchMedia("(pointer: fine)").matches;
+    setReduced(r);
+    setIsCoarse(coarse);
+    if (r) return;
 
-  // Raw pointer offset from the card's own center, in px, clamped.
-  const px = useMotionValue(0);
-  const py = useMotionValue(0);
+    // Entrance: the card starts high (spring compressed) and drops onto
+    // the spring, which stretches and recoils — same physics path as a
+    // drag release, so it can't look like a separate canned animation.
+    dragY.set(-(REST_LENGTH - MIN_LENGTH));
+    const controls = animate(dragY, 0, { ...ENTRANCE_SPRING, delay: 0.15 });
+    return () => controls.stop();
+  }, [dragY]);
 
-  // Spring-damped so the card eases toward the pointer instead of
-  // snapping — this is the whole "physical" feel, no physics engine.
-  const springX = useSpring(px, CARD_SPRING);
-  const springY = useSpring(py, CARD_SPRING);
+  const startDrag = (e) => {
+    if (reduced || isCoarse || e.target.closest("a")) return;
+    releaseX.current?.stop();
+    releaseY.current?.stop();
+    dragging.current = true;
+    origin.current = { x: e.clientX - dragX.get(), y: e.clientY - dragY.get() };
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
 
-  const rotateY = useTransform(springX, [-60, 60], [-12, 12]);
-  const rotateX = useTransform(springY, [-60, 60], [10, -10]);
-  const lanyardSkew = useTransform(springX, [-60, 60], [-6, 6]);
-  // Same spring the lanyard skews with, so the card actually swings
-  // sideways with it instead of just tilting in place while the coil
-  // leans on its own.
-  const swayX = useTransform(springX, [-60, 60], [-16, 16]);
-  const swayY = useTransform(springY, [-60, 60], [-8, 8]);
-  const dragX = useSpring(0, DRAG_SPRING);
-  const dragY = useSpring(0, DRAG_SPRING);
+  const moveDrag = (e) => {
+    if (!dragging.current) return;
+    dragX.set(clamp(e.clientX - origin.current.x, -MAX_DRAG_X, MAX_DRAG_X));
+    dragY.set(clamp(e.clientY - origin.current.y, -MAX_DRAG_UP, MAX_DRAG_DOWN));
+  };
 
-  // Tracked only while the pointer is actually over the card, so it
-  // snaps back to neutral the moment the mouse leaves — not just when
-  // it leaves the browser window entirely.
-  const onCardMove = (e) => {
-    if (reduced || isCoarse) return;
+  const endDrag = (e) => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    releaseX.current = animate(dragX, 0, RELEASE_SPRING);
+    releaseY.current = animate(dragY, 0, RELEASE_SPRING);
+  };
+
+  const onWrapMove = (e) => {
+    if (reduced || isCoarse || dragging.current) return;
     const el = wrapRef.current;
     if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    px.set(Math.max(-60, Math.min(60, e.clientX - cx)));
-    py.set(Math.max(-60, Math.min(60, e.clientY - cy)));
+    const r = el.getBoundingClientRect();
+    pointerX.set(clamp(e.clientX - (r.left + r.width / 2), -60, 60));
+    pointerY.set(clamp(e.clientY - (r.top + r.height / 2), -60, 60));
   };
 
-  const onCardLeave = () => {
-    setHovered(false);
-    px.set(0);
-    py.set(0);
+  const onWrapEnter = () => {
+    if (reduced || isCoarse) return;
+    animate(bounceY, 14, BOUNCE_SPRING);
   };
 
-  // Touch devices never fire hover, so a tap triggers the same bounce
-  // for a moment instead — the spring settling back down IS the
-  // feedback, same as a hover-leave would give on desktop.
-  const tapTimeout = useRef(null);
-  useEffect(() => () => clearTimeout(tapTimeout.current), []);
+  const onWrapLeave = () => {
+    pointerX.set(0);
+    pointerY.set(0);
+    if (!reduced && !isCoarse) animate(bounceY, 0, BOUNCE_SPRING);
+  };
+
+  // Touch has no hover, so a tap tugs the card down and lets the spring
+  // pull it back — the same stretch/recoil, just triggered differently.
   const onTap = () => {
     if (reduced || !isCoarse) return;
-    setHovered(true);
-    clearTimeout(tapTimeout.current);
-    tapTimeout.current = setTimeout(() => setHovered(false), 900);
+    animate(bounceY, [0, 26, 0], {
+      duration: 1,
+      times: [0, 0.32, 1],
+      ease: [0.16, 1, 0.3, 1],
+    });
   };
 
   return (
     <div
       className={`id-card__wrap ${reduced ? "id-card__wrap--static" : ""}`}
       ref={wrapRef}
-      onMouseEnter={() => setHovered(true)}
-      onMouseMove={onCardMove}
-      onMouseLeave={onCardLeave}
+      onMouseMove={onWrapMove}
+      onMouseEnter={onWrapEnter}
+      onMouseLeave={onWrapLeave}
       onClick={onTap}
     >
-      <div className="id-card__mount" aria-hidden="true" />
-      <motion.svg
-        className="id-card__lanyard-coil"
-        viewBox="0 0 20 50"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-        style={{ skewX: reduced ? 0 : lanyardSkew, transformOrigin: "top center" }}
-        animate={{ scaleY: hovered && !reduced ? 1.3 : 1 }}
-        transition={HOVER_SPRING}
-      >
-        {COIL_LOOPS.map((cy, i) => (
-          <ellipse key={i} cx="10" cy={cy} rx="7" ry="3" />
-        ))}
-        <path d={HOOK_PATH} fill="none" />
-      </motion.svg>
-
-      {/* Entrance only — kept separate so the hover bounce below can
-          re-target y/rotate without fighting the one-time drop-in. */}
       <motion.div
-        initial={{ y: -120, rotate: -8, opacity: 0 }}
-        animate={{ y: 0, rotate: 0, opacity: 1 }}
-        transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+        className="id-card__rig"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        {/* Hover bounce — the card's end of the same spring as the
-            coil, so stretching the lanyard visibly tugs the card down
-            and lets it spring back, instead of the two moving separately. */}
+        <div className="id-card__mount" aria-hidden="true" />
+
         <motion.div
-          animate={{ y: hovered && !reduced ? 16 : 0, rotate: hovered && !reduced ? 3 : 0 }}
-          transition={HOVER_SPRING}
+          className="id-card__hang"
+          style={{ x: totalX, y: totalY, rotate: reduced ? 0 : cardTilt }}
         >
-          {/* Sway — the card's lateral position tied to the same
-              spring as the lanyard's skew, so it swings with the coil
-              on mouse move instead of only rotating in place. */}
-          <motion.div style={{ x: reduced ? 0 : swayX, y: reduced ? 0 : swayY }}>
-            <motion.div
-              className="id-card__stage"
-              style={{
-                x: reduced ? 0 : dragX,
-                y: reduced ? 0 : dragY,
-                rotateX: reduced ? 0 : rotateX,
-                rotateY: reduced ? 0 : rotateY,
-              }}
-              drag={!reduced && !isCoarse}
-              dragConstraints={{ top: -30, bottom: 30, left: -40, right: 40 }}
-              dragElastic={0.4}
-              onDrag={(_, info) => {
-                dragX.set(info.offset.x);
-                dragY.set(info.offset.y);
-              }}
-              onDragEnd={() => {
-                dragX.set(0);
-                dragY.set(0);
-              }}
-            >
-              <div className="id-card__card">
-                <div className="id-card__face">
-                  <div className="id-card__clip" />
-                  <span className="id-card__badge-label">Access Badge</span>
-                  <div className="id-card__avatar">
-                    <img src="/avatar.jpg" alt="" />
-                  </div>
-                  <h3 className="id-card__name">{personal.name}</h3>
-                  {personal.location && (
-                    <p className="id-card__location">
-                      <FiMapPin size={11} className="id-card__location-icon" /> {personal.location}
-                    </p>
-                  )}
-                  {personal.tagline && (
-                    <p className="id-card__quote">
-                      <span className="id-card__quote-mark" aria-hidden="true">“</span>
-                      {personal.tagline}
-                    </p>
-                  )}
-                  {personal.instagram && (
-                    <a
-                      className="id-card__social"
-                      href={personal.instagram}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="Instagram"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {/* Custom outline so the gradient colors the icon
-                          itself (via stroke), not a background chip. */}
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <defs>
-                          <linearGradient id="id-card-ig-gradient" x1="0" y1="24" x2="24" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop offset="0" stopColor="#fdf497" />
-                            <stop offset="0.35" stopColor="#fd5949" />
-                            <stop offset="0.65" stopColor="#d6249f" />
-                            <stop offset="1" stopColor="#285aeb" />
-                          </linearGradient>
-                        </defs>
-                        <g stroke="url(#id-card-ig-gradient)">
-                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-                        </g>
-                      </svg>
-                    </a>
-                  )}
+          <motion.div
+            className="id-card__stage"
+            style={{ rotateX: reduced ? 0 : tiltX, rotateY: reduced ? 0 : tiltY }}
+            onPointerDown={startDrag}
+            onPointerMove={moveDrag}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          >
+            <div className="id-card__card">
+              <div className="id-card__face">
+                <div className="id-card__slot" aria-hidden="true" />
+                <span className="id-card__badge-label">Access Badge</span>
+                <div className="id-card__avatar">
+                  <img src="/avatar.jpg" alt="" />
                 </div>
+                <h3 className="id-card__name">{personal.name}</h3>
+                {personal.location && (
+                  <p className="id-card__location">
+                    <FiMapPin size={11} className="id-card__location-icon" /> {personal.location}
+                  </p>
+                )}
+                {personal.tagline && (
+                  <p className="id-card__quote">
+                    <span className="id-card__quote-mark" aria-hidden="true">“</span>
+                    {personal.tagline}
+                  </p>
+                )}
+                {personal.instagram && (
+                  <a
+                    className="id-card__social"
+                    href={personal.instagram}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Instagram"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <defs>
+                        <linearGradient id="id-card-ig-gradient" x1="0" y1="24" x2="24" y2="0" gradientUnits="userSpaceOnUse">
+                          <stop offset="0" stopColor="#fdf497" />
+                          <stop offset="0.35" stopColor="#fd5949" />
+                          <stop offset="0.65" stopColor="#d6249f" />
+                          <stop offset="1" stopColor="#285aeb" />
+                        </linearGradient>
+                      </defs>
+                      <g stroke="url(#id-card-ig-gradient)">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                      </g>
+                    </svg>
+                  </a>
+                )}
               </div>
-            </motion.div>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Drawn after the card so the hook ring sits in front of the
+            slot — you see the slot through the ring, which is what
+            makes it read as hooked through rather than resting on. */}
+        <motion.div
+          className="id-card__spring"
+          style={{ rotate: reduced ? 0 : springAngle }}
+          aria-hidden="true"
+        >
+          <svg className="id-card__coil" width={COIL_CX * 2} height={280} overflow="visible">
+            <path ref={coilRef} d={coilPath(REST_LENGTH)} />
+          </svg>
+
+          <motion.div className="id-card__hook" style={{ y: springLength }}>
+            <svg width="26" height="30" viewBox="0 0 26 30" overflow="visible">
+              <path d="M13 0 L13 7" />
+              <circle cx="13" cy="15" r="7.5" />
+            </svg>
           </motion.div>
         </motion.div>
       </motion.div>

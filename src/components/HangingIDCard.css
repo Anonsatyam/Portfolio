@@ -1,71 +1,126 @@
+/* Geometry mirrors the constants in HangingIDCard.jsx:
+   REST_LENGTH 56, SLOT_INSET 11  ->  card offset = 56 - 11 = 45 */
 .id-card__wrap {
+  --card-w: clamp(200px, 17vw, 260px);
+  --rest-length: 56px;
+  --slot-inset: 11px;
   position: relative;
   width: 100%;
-  height: 100%;
   min-height: 320px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   padding-top: clamp(0.5rem, 2vh, 1.5rem);
   perspective: 1200px;
 }
 
+/* The coordinate space everything is measured in: y = 0 is the anchor. */
+.id-card__rig {
+  position: relative;
+  width: var(--card-w);
+}
+
 .id-card__mount {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  margin-left: -5px;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--color-border-strong);
   box-shadow: 0 0 0 3px var(--color-bg), 0 1px 3px rgba(0, 0, 0, 0.6);
-  flex-shrink: 0;
-  z-index: 2;
+  z-index: 3;
 }
 
-.id-card__lanyard-coil {
-  width: 20px;
-  height: clamp(38px, 6.2vh, 58px);
-  flex-shrink: 0;
-  overflow: visible;
-  /* Tucks the hook's curled tip just under the clip so it reads as
-     latched in, without hiding the hook shape itself. */
-  margin-bottom: -8px;
-}
-
-.id-card__lanyard-coil ellipse,
-.id-card__lanyard-coil path {
-  fill: none;
-  stroke: var(--color-accent);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  transition: stroke var(--transition-fast);
-}
-
-.id-card__wrap:hover .id-card__lanyard-coil ellipse,
-.id-card__wrap:hover .id-card__lanyard-coil path {
-  stroke: var(--color-accent-hover);
+/* Card hangs from the anchor, pivoting around its slot. */
+.id-card__hang {
+  margin-top: calc(var(--rest-length) - var(--slot-inset));
+  transform-origin: 50% var(--slot-inset);
+  will-change: transform;
 }
 
 .id-card__stage {
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
 }
 
 .id-card__stage:active {
   cursor: grabbing;
 }
 
+/* Spring layer: pivots at the anchor, so rotating it swings the coil
+   and hook together toward wherever the card currently is. */
+.id-card__spring {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-origin: top center;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.id-card__coil {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-left: -10px;
+  width: 20px;
+  /* The spring layer is a zero-width anchor point, and global.css sets
+     `svg { max-width: 100% }` — which would resolve to 0 here and stop
+     the coil painting entirely. */
+  max-width: none;
+  overflow: visible;
+}
+
+.id-card__coil path {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Rigid hardware — translated to the spring's end but never scaled,
+   so the hook keeps its shape however far the coil stretches. */
+.id-card__hook {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 26px;
+  height: 30px;
+  margin-left: -13px;
+  margin-top: -15px;
+  overflow: visible;
+}
+
+.id-card__hook svg {
+  max-width: none;
+  overflow: visible;
+}
+
+.id-card__hook path,
+.id-card__hook circle {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.id-card__wrap:hover .id-card__coil path,
+.id-card__wrap:hover .id-card__hook path,
+.id-card__wrap:hover .id-card__hook circle {
+  stroke: var(--color-accent-hover);
+}
+
 .id-card__card {
   position: relative;
-  width: clamp(200px, 17vw, 260px);
+  width: 100%;
   border-radius: var(--radius-lg, 16px);
 }
 
 .id-card__face {
-  /* Was position:absolute;inset:0 to stack front/back faces for the
-     flip that no longer exists. Now the card's only child, so letting
-     it sit in normal flow makes the card size to its actual content
-     instead of a fixed aspect-ratio box - nothing can overflow below
-     it regardless of how long the quote or name gets. */
   position: relative;
   border-radius: var(--radius-lg, 16px);
   border: 1px solid var(--color-border);
@@ -73,22 +128,27 @@
   box-shadow:
     0 18px 40px -12px rgba(0, 0, 0, 0.65),
     0 0 0 1px rgba(255, 255, 255, 0.02) inset;
-  padding: 1.5rem 1.15rem 1.25rem;
+  padding: 1.9rem 1.15rem 1.25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
 }
 
-.id-card__clip {
+/* A punched hole, not a clip stuck on top — the hook ring sits over it
+   so the slot shows through the ring's centre. */
+.id-card__slot {
   position: absolute;
-  top: -1px;
+  top: 6px;
   left: 50%;
-  transform: translateX(-50%);
-  width: 46px;
-  height: 12px;
-  border-radius: 0 0 8px 8px;
-  background: var(--color-border-strong);
+  margin-left: -17px;
+  width: 34px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.95),
+    0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .id-card__avatar {
@@ -122,13 +182,9 @@
 
 .id-card__badge-label {
   position: absolute;
-  top: 1.1rem;
+  top: 1.3rem;
   left: 50%;
   transform: translateX(-50%);
-  /* Without this, an absolutely-positioned element with only `left`
-     set gets its shrink-to-fit width capped at the remaining space to
-     the container's edge (~half the card here), wrapping "ACCESS
-     BADGE" onto two lines on narrow cards. */
   white-space: nowrap;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -181,6 +237,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
   transition: transform var(--transition-fast), filter var(--transition-fast);
 }
 
@@ -193,11 +250,6 @@
   filter: drop-shadow(0 2px 6px rgba(214, 36, 159, 0.55));
 }
 
-/* Reduced motion: static badge, no spring, no drag, no tilt */
-.id-card__wrap--static .id-card__lanyard-coil {
-  height: clamp(38px, 6.2vh, 58px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .id-card__stage {
     cursor: default;
@@ -206,9 +258,7 @@
 
 @media (max-width: 900px) {
   .id-card__wrap {
+    --card-w: clamp(165px, 34vw, 210px);
     min-height: 220px;
-  }
-  .id-card__card {
-    width: clamp(165px, 34vw, 210px);
   }
 }
