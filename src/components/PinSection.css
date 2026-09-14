@@ -1,0 +1,20 @@
+.pin-track {
+  position: relative;
+}
+
+.pin-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-content {
+  width: 100%;
+  max-height: calc(100vh - clamp(88px, 12vh, 120px));
+  overflow-y: auto;
+  padding-block: clamp(1rem, 4vh, 2rem);
+}

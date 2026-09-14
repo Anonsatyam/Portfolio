@@ -1,16 +1,12 @@
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { FiGithub, FiLinkedin, FiArrowDown, FiMail } from "react-icons/fi";
 import { personal } from "../data/content";
 import "./Hero.css";
 
-export default function Hero() {
-  const scrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
-
+function HeroContent({ scrollTo }) {
   return (
-    <section id="hero" className="hero">
+    <>
       <div className="hero__bg" aria-hidden="true">
         <div className="hero__grid" />
         <div className="hero__blob hero__blob--1" />
@@ -108,6 +104,47 @@ export default function Hero() {
           <FiArrowDown size={22} />
         </motion.button>
       </div>
+    </>
+  );
+}
+
+export default function Hero() {
+  const trackRef = useRef(null);
+  const [reducedMotion, setReducedMotion] = useState(null);
+
+  useEffect(() => {
+    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+
+  const { scrollYProgress } = useScroll({
+    target: trackRef,
+    offset: ["start start", "end end"],
+  });
+  // Hero is already visible at load (no "enter" phase needed) — just
+  // holds at full size, then scales/fades back as the user scrolls past it.
+  const scale = useTransform(scrollYProgress, [0, 0.82, 1], [1, 1, 0.88]);
+  const opacity = useTransform(scrollYProgress, [0, 0.82, 1], [1, 1, 0.3]);
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
+  if (reducedMotion === null) return null;
+
+  if (reducedMotion) {
+    return (
+      <section id="hero" className="hero">
+        <HeroContent scrollTo={scrollTo} />
+      </section>
+    );
+  }
+
+  return (
+    <section id="hero" className="pin-track" ref={trackRef} style={{ height: "160vh" }}>
+      <motion.div className="hero pin-sticky" style={{ scale, opacity }}>
+        <HeroContent scrollTo={scrollTo} />
+      </motion.div>
     </section>
   );
 }

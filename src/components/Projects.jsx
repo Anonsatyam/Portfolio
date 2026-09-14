@@ -1,4 +1,5 @@
 import { FiCheckCircle, FiExternalLink } from "react-icons/fi";
+import PinSection from "./PinSection";
 import Reveal from "./Reveal";
 import { projects } from "../data/content";
 import { ICONS_3D } from "../lib/icons3d";
@@ -6,69 +7,62 @@ import "./Projects.css";
 
 export default function Projects() {
   return (
-    <section id="projects" className="section section--alt projects">
-      <div className="container">
-        <Reveal>
-          <div className="section-head">
-            <span className="eyebrow">My Work</span>
-            <h2 className="section-title">Featured Projects</h2>
-            <p className="section-subtitle">
-              A mix of enterprise dashboards, side projects, and tools I've designed, built, and shipped.
-            </p>
-          </div>
-        </Reveal>
+    <PinSection id="projects" altBg>
+      <Reveal>
+        <div className="section-head">
+          <span className="eyebrow">My Work</span>
+          <h2 className="section-title">Featured Projects</h2>
+          <p className="section-subtitle">
+            A mix of enterprise dashboards, side projects, and tools I've designed, built, and shipped.
+          </p>
+        </div>
+      </Reveal>
 
-        <div className="projects__grid">
-          {projects.map((project, i) => (
-            <Reveal key={project.title} delay={i * 0.12} direction="up" className="projects__card-wrap">
-              <div className="projects__card card">
-                <div className="projects__top">
-                  <img className="projects__icon" src={ICONS_3D[project.icon]} alt="" width={40} height={40} loading="lazy" />
-                  {project.link && (
-                    <a
-                      href={project.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="projects__link"
-                      aria-label={`Open ${project.title}`}
-                    >
-                      <FiExternalLink size={18} />
-                    </a>
-                  )}
-                </div>
-
-                <h3 className="projects__title">{project.title}</h3>
-
-                <div className="projects__tech">
-                  {project.tech.map((t) => (
-                    <span className="tag" key={t}>{t}</span>
-                  ))}
-                </div>
-
-                <ul className="projects__points">
-                  {project.points.map((p, idx) => (
-                    <li key={idx}>
-                      <FiCheckCircle className="projects__point-icon" />
-                      <span>{p}</span>
-                    </li>
-                  ))}
-                </ul>
-
+      <div className="projects__grid">
+        {projects.map((project, i) => (
+          <Reveal key={project.title} delay={i * 0.12} direction="up" className="projects__card-wrap">
+            <div className="projects__card card">
+              <div className="projects__top">
+                <img className="projects__icon" src={ICONS_3D[project.icon]} alt="" width={40} height={40} loading="lazy" />
                 {project.link && (
                   <a
                     href={project.link}
                     target="_blank"
                     rel="noreferrer"
-                    className="projects__cta"
+                    className="projects__link"
+                    aria-label={`Open ${project.title}`}
                   >
-                    View Project <FiExternalLink size={14} />
+                    <FiExternalLink size={18} />
                   </a>
                 )}
               </div>
-            </Reveal>
-          ))}
-        </div>
+
+              <h3 className="projects__title">{project.title}</h3>
+
+              <div className="projects__tech">
+                {project.tech.map((t) => (
+                  <span className="tag" key={t}>{t}</span>
+                ))}
+              </div>
+
+              <ul className="projects__points">
+                {project.points.map((p, idx) => (
+                  <li key={idx}>
+                    <FiCheckCircle className="projects__point-icon" />
+                    <span>{p}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {project.link && (
+                <a href={project.link} target="_blank" rel="noreferrer" className="projects__cta">
+                  View Project <FiExternalLink size={14} />
+                </a>
+              )}
+            </div>
+          </Reveal>
+        ))}
       </div>
-    </section>
+    </PinSection>
   );
 }
