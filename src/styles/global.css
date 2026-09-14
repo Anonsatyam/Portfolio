@@ -161,16 +161,48 @@ section[id] {
 }
 
 .card {
+  position: relative;
+  isolation: isolate;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-base), transform var(--transition-base);
+  transition: box-shadow var(--transition-base), transform var(--transition-base),
+    border-color var(--transition-base);
+}
+
+/* An accent light that follows the pointer across the card (position fed
+   by CardHover.jsx), so hovering is a response to where you actually are
+   rather than a single flat state change. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    340px circle at var(--px, 50%) var(--py, 50%),
+    color-mix(in srgb, var(--color-accent) 16%, transparent),
+    transparent 68%
+  );
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
+  transform: translateY(-6px);
+  box-shadow: 0 24px 50px -24px rgba(0, 0, 0, 0.9);
+  border-color: color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+}
+
+.card:hover::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card::before {
+    display: none;
+  }
 }
 
 :focus-visible {

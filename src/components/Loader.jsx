@@ -5,15 +5,18 @@ import { personal } from "../data/content";
 import "./Loader.css";
 
 const COLUMNS = 6;
-const COUNT_MS = 1150; // counter 0 -> 100
-const EXIT_AT = 1250; // curtain starts lifting
+const RUN_MS = 1500;
+const EXIT_AT = 1620;
 const EXIT_EASE = [0.76, 0, 0.24, 1];
-const LETTERS = personal.name.toUpperCase().split("");
+const NAME = personal.name.toUpperCase();
+const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#%$&@/\\<>*";
 
 export default function Loader() {
   const [visible, setVisible] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const countRef = useRef(null);
+  const nameRef = useRef(null);
+  const fillRef = useRef(null);
   const reduced = prefersReducedMotion();
 
   useEffect(() => {
@@ -24,20 +27,39 @@ export default function Loader() {
       return () => clearTimeout(t);
     }
 
-    const counter = animate(0, 100, {
-      duration: COUNT_MS / 1000,
+    // One animation drives everything: the counter, the red fill
+    // sweeping across the name, and the scramble resolving letter by
+    // letter — so the name literally *is* the progress bar.
+    const run = animate(0, 100, {
+      duration: RUN_MS / 1000,
       ease: [0.16, 1, 0.3, 1],
       onUpdate: (v) => {
-        if (countRef.current) countRef.current.textContent = String(Math.round(v));
+        const pct = Math.round(v);
+        if (countRef.current) countRef.current.textContent = String(pct).padStart(2, "0");
+        if (fillRef.current) fillRef.current.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+
+        // Letters left of the playhead are settled; the rest churn.
+        if (nameRef.current) {
+          const settled = Math.floor((pct / 100) * NAME.length);
+          let out = "";
+          for (let i = 0; i < NAME.length; i += 1) {
+            if (NAME[i] === " ") out += " ";
+            else if (i < settled) out += NAME[i];
+            else out += GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+          }
+          nameRef.current.textContent = out;
+        }
+      },
+      onComplete: () => {
+        if (nameRef.current) nameRef.current.textContent = NAME;
       },
     });
 
-    // Lift the curtain, then unmount once the last column has cleared.
     const exit = setTimeout(() => setLeaving(true), EXIT_AT);
     const done = setTimeout(() => setVisible(false), EXIT_AT + 900);
 
     return () => {
-      counter.stop();
+      run.stop();
       clearTimeout(exit);
       clearTimeout(done);
     };
@@ -51,7 +73,6 @@ export default function Loader() {
     <AnimatePresence>
       {visible && (
         <div className="loader" key="loader">
-          {/* Curtain: columns lift in sequence to reveal the page. */}
           <div className="loader__curtain" aria-hidden="true">
             {Array.from({ length: COLUMNS }).map((_, i) => (
               <motion.span
@@ -70,35 +91,21 @@ export default function Loader() {
 
           <motion.div
             className="loader__content"
-            animate={{ opacity: leaving ? 0 : 1, y: leaving ? -18 : 0 }}
+            animate={{ opacity: leaving ? 0 : 1, y: leaving ? -20 : 0 }}
             transition={{ duration: 0.4, ease: EASE_PREMIUM }}
           >
-            <p className="loader__name" aria-label={personal.name}>
-              {LETTERS.map((ch, i) => (
-                <span className="loader__letter-mask" key={i}>
-                  <motion.span
-                    className="loader__letter"
-                    initial={{ y: "110%" }}
-                    animate={{ y: "0%" }}
-                    transition={{ duration: 0.65, delay: 0.05 + i * 0.035, ease: EASE_PREMIUM }}
-                  >
-                    {ch === " " ? " " : ch}
-                  </motion.span>
-                </span>
-              ))}
-            </p>
-
-            <div className="loader__meter">
-              <motion.span
-                className="loader__meter-fill"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ duration: COUNT_MS / 1000, ease: [0.16, 1, 0.3, 1] }}
-              />
+            <div className="loader__word" aria-label={personal.name}>
+              {/* Dim base, with a red copy clipped to the progress on top. */}
+              <span className="loader__word-base" ref={nameRef} aria-hidden="true">
+                {NAME}
+              </span>
+              <span className="loader__word-fill" ref={fillRef} aria-hidden="true">
+                {NAME}
+              </span>
             </div>
 
-            <p className="loader__count">
-              <span ref={countRef}>0</span>
+            <p className="loader__count" aria-hidden="true">
+              <span ref={countRef}>00</span>
               <span className="loader__percent">%</span>
             </p>
           </motion.div>

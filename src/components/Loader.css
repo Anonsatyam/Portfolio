@@ -8,8 +8,7 @@
   pointer-events: none;
 }
 
-/* Columns sit behind the text and lift in sequence, so the page is
-   revealed in slices rather than a single flat fade. */
+/* Columns lift in sequence, revealing the page in slices. */
 .loader__curtain {
   position: absolute;
   inset: 0;
@@ -29,66 +28,54 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.75rem;
   padding-inline: 1.5rem;
 }
 
-.loader__name {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+/* Two stacked copies of the name: a dim base that scrambles, and a red
+   copy clipped to the current progress, so the fill sweeping across the
+   word is the progress indicator. */
+.loader__word {
+  position: relative;
   font-family: var(--font-display);
-  font-size: clamp(1.75rem, 6vw, 3.5rem);
+  font-size: clamp(1.6rem, 6.5vw, 4rem);
   font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--color-ink);
+  letter-spacing: 0.06em;
   line-height: 1;
+  white-space: nowrap;
 }
 
-.loader__letter-mask {
-  display: inline-block;
-  overflow: hidden;
-  line-height: 1.1;
+.loader__word-base {
+  color: #2e2e2e;
 }
 
-.loader__letter {
-  display: inline-block;
-  white-space: pre;
-  will-change: transform;
-}
-
-.loader__meter {
-  width: clamp(140px, 24vw, 240px);
-  height: 2px;
-  border-radius: 999px;
-  background: var(--color-border);
-  overflow: hidden;
-}
-
-.loader__meter-fill {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--color-accent);
-  transform-origin: left;
+.loader__word-fill {
+  position: absolute;
+  inset: 0;
+  color: var(--color-accent);
+  clip-path: inset(0 100% 0 0);
+  will-change: clip-path;
 }
 
 .loader__count {
   font-family: var(--font-display);
-  font-size: var(--fs-sm);
+  font-size: clamp(0.8rem, 1.6vw, 1rem);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.22em;
   color: var(--color-text-soft);
+  font-variant-numeric: tabular-nums;
 }
 
 .loader__percent {
   color: var(--color-accent);
+  margin-left: 0.15em;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .loader__letter,
-  .loader__col,
-  .loader__meter-fill {
-    transition: none;
+  .loader__word-fill {
+    clip-path: none;
+  }
+  .loader__word-base {
+    color: var(--color-ink);
   }
 }
