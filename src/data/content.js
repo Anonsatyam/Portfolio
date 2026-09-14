@@ -66,10 +66,9 @@ export const experience = [
     period: "Aug 2020 — Sep 2025",
     location: "Noida, India",
     points: [
-      "Spearheaded the design and development of the COTA dashboard using Angular 10, leading migration to Angular 14 and 18 to enhance performance and maintainability.",
-      "Ensured 95% code coverage with Karma and Jasmine. Authored and standardized Global Goods Testing Standards (GGTS) using Selenium and Robot Framework, improving test consistency across teams.",
-      "Developed a CI/CD pipeline doubling release frequency and cutting integration issues by 75%.",
-      "Engineered and deployed robust Java-based APIs targeting SIM service functionalities, improving data retrieval efficiency by 40% while ensuring seamless integration with existing systems.",
+      "Spearheaded the COTA dashboard, migrating it from Angular 10 to Angular 14 and 18 for better performance and maintainability.",
+      "Built a CI/CD pipeline that doubled release frequency and cut integration issues by 75%.",
+      "Engineered Java-based APIs for SIM services, improving data retrieval efficiency by 40%.",
     ],
     tags: ["Angular", "Java", "NgRx", "Robot Framework", "CI/CD"],
   },
