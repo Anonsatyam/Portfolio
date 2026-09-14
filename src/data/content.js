@@ -189,6 +189,7 @@ export const education = {
 export const accomplishments = [
   {
     title: "TIIS Hackathon — First Prize",
+    year: "2022",
     detail: "Showcased expertise in migration tools for the Trust Nest platform.",
   },
 ];

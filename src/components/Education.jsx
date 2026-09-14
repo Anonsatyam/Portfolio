@@ -35,6 +35,7 @@ export default function Education() {
               </div>
               <h3 className="education__title">{acc.title}</h3>
               <p className="education__school">{acc.detail}</p>
+              {acc.year && <p className="education__period">{acc.year}</p>}
             </StaggerItem>
           ))}
         </StaggerGroup>
