@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { FiGithub, FiLinkedin, FiArrowDown, FiMail } from "react-icons/fi";
-import { personal, experience } from "../data/content";
+import { personal, experience, availability } from "../data/content";
 import { scrollToId } from "../lib/smoothScroll";
 import { prefersReducedMotion } from "../lib/motion";
 import BlurReveal from "./BlurReveal";
@@ -71,7 +71,14 @@ export default function Hero() {
       <div className="container hero__inner">
         <div className="hero__columns">
           <div className="hero__content">
-            <BlurReveal as="p" className="hero__eyebrow" delay={0}>
+            {availability.open && (
+              <BlurReveal as="p" className="hero__available" delay={0}>
+                <span className="hero__available-dot" aria-hidden="true" />
+                {availability.label}
+              </BlurReveal>
+            )}
+
+            <BlurReveal as="p" className="hero__eyebrow" delay={0.06}>
               Hello, I'm
             </BlurReveal>
 

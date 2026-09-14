@@ -1,0 +1,27 @@
+.icon-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  transition: color var(--transition-base), background var(--transition-base),
+    border-color var(--transition-base), transform var(--transition-base);
+}
+
+.card:hover .icon-tile {
+  color: #ffffff;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.icon-tile--sm {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+}

@@ -2,13 +2,13 @@ import { FiGithub, FiLinkedin } from "react-icons/fi";
 import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import StaggerGroup, { StaggerItem } from "./StaggerGroup";
+import { FiMail } from "react-icons/fi";
 import { personal } from "../data/content";
-import { ICONS_3D } from "../lib/icons3d";
 import "./Contact.css";
 
 const links = [
   {
-    img: ICONS_3D.envelope,
+    Icon: FiMail,
     label: "Email",
     value: personal.email,
     href: `mailto:${personal.email}`,
@@ -60,11 +60,7 @@ export default function Contact() {
                 className="contact__icon"
                 style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "#ffffff" }}
               >
-                {link.img ? (
-                  <img src={link.img} alt="" width={30} height={30} loading="lazy" />
-                ) : (
-                  <link.Icon size={24} />
-                )}
+                <link.Icon size={24} />
               </div>
               <div className="contact__label">{link.label}</div>
               <div className="contact__value">{link.value}</div>

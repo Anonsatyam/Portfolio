@@ -32,6 +32,12 @@
   font-weight: 700;
   color: var(--color-ink);
   margin-top: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.projects__summary {
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
   margin-bottom: 0.9rem;
 }
 

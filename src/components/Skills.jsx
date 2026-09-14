@@ -1,21 +1,13 @@
 import { motion } from "framer-motion";
 import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
+import Icon from "../lib/icons";
 import { skills } from "../data/content";
-import { ICONS_3D } from "../lib/icons3d";
 import "./Skills.css";
-
-const CATEGORY_ICONS = {
-  "Languages & Libraries": ICONS_3D.books,
-  "Testing & Automation": ICONS_3D.robot,
-  "Development Tools": ICONS_3D.wrench,
-};
 
 const container = {
   hidden: {},
-  show: {
-    transition: { staggerChildren: 0.05 },
-  },
+  show: { transition: { staggerChildren: 0.04 } },
 };
 
 const item = {
@@ -30,7 +22,10 @@ export default function Skills() {
         <Reveal>
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">03</span>What I Know</span>
-            <AnimatedHeading as="h2" className="section-title" text="Skills & Tools" />
+            <AnimatedHeading as="h2" className="section-title" text="The Stack I Build With" />
+            <p className="section-subtitle">
+              Highlighted below is what I work in day to day — the rest I've shipped with and can pick back up.
+            </p>
           </div>
         </Reveal>
 
@@ -39,7 +34,7 @@ export default function Skills() {
             <Reveal key={group.category} delay={gi * 0.1}>
               <div className="skills__group card">
                 <div className="skills__category-head">
-                  <img src={CATEGORY_ICONS[group.category]} alt="" width={32} height={32} loading="lazy" />
+                  <Icon name={group.icon} size={18} className="icon-tile--sm" />
                   <h3 className="skills__category">{group.category}</h3>
                 </div>
                 <motion.div
@@ -51,12 +46,12 @@ export default function Skills() {
                 >
                   {group.items.map((skill) => (
                     <motion.span
-                      key={skill}
-                      className="tag skills__badge"
+                      key={skill.name}
+                      className={`skills__badge ${skill.core ? "is-core" : ""}`}
                       variants={item}
-                      whileHover={{ scale: 1.08, y: -2 }}
+                      whileHover={{ scale: 1.06, y: -2 }}
                     >
-                      {skill}
+                      {skill.name}
                     </motion.span>
                   ))}
                 </motion.div>

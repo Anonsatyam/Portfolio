@@ -3,8 +3,8 @@ import { motion, useScroll, useSpring } from "framer-motion";
 import { FiMapPin, FiCalendar } from "react-icons/fi";
 import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
+import Icon from "../lib/icons";
 import { experience } from "../data/content";
-import { ICONS_3D } from "../lib/icons3d";
 import "./Experience.css";
 
 export default function Experience() {
@@ -49,7 +49,7 @@ export default function Experience() {
                     {isCurrent && <span className="experience__current-badge">Current</span>}
 
                     <div className="experience__top">
-                      <img src={ICONS_3D.briefcase} alt="" width={40} height={40} loading="lazy" />
+                      <Icon name="briefcase" />
                       <div className="experience__meta">
                         <span><FiCalendar className="experience__meta-icon" size={14} /> {job.period}</span>
                         <span><FiMapPin className="experience__meta-icon" size={14} /> {job.location}</span>

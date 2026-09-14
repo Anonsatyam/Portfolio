@@ -45,9 +45,9 @@ export default function Projects() {
         <Reveal>
           <div className="section-head">
             <span className="eyebrow"><span className="eyebrow__num">04</span>My Work</span>
-            <AnimatedHeading as="h2" className="section-title" text="Featured Projects" />
+            <AnimatedHeading as="h2" className="section-title" text="Things I've Shipped" />
             <p className="section-subtitle">
-              A mix of enterprise dashboards, side projects, and tools I've designed, built, and shipped.
+              Side projects built and released on my own — both are live, and you can use them right now.
             </p>
           </div>
         </Reveal>
@@ -69,6 +69,8 @@ export default function Projects() {
                 )}
 
                 <h3 className="projects__title">{project.title}</h3>
+
+                {project.summary && <p className="projects__summary">{project.summary}</p>}
 
                 <div className="projects__tech">
                   {project.tech.map((t) => (

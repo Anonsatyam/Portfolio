@@ -10,9 +10,24 @@ export const personal = {
   github: "https://github.com/Anonsatyam",
   instagram: "https://www.instagram.com/satyam.js",
   resumeUrl: "/Satyam_Resume_React.pdf",
+  careerStart: "2020-08", // used to keep the years-of-experience stat current
   tagline:
-    "Building fast, reliable, and intuitive web experiences with clean, scalable code.",
+    "I build the interfaces that manage SIM, eSIM and IoT connectivity at carrier scale — Angular and React on the front, Java underneath.",
 };
+
+export const availability = {
+  open: true,
+  label: "Open to Full Stack / Frontend roles",
+};
+
+// Every figure here is pulled from the experience bullets below — no
+// number appears on the site that isn't backed by real work.
+export const stats = [
+  { value: 75, suffix: "%", label: "Fewer integration issues", detail: "after building out CI/CD" },
+  { value: 40, suffix: "%", label: "Faster data retrieval", detail: "across SIM service APIs" },
+  { value: 30, suffix: "%", label: "Faster load times", detail: "from NgRx optimisation" },
+  { value: 200, suffix: "+", label: "Extension installs", detail: "5-star rated on the Marketplace" },
+];
 
 export const about = {
   summary:
@@ -75,44 +90,81 @@ export const experience = [
   },
 ];
 
+// `core: true` marks the stack actually worked in day to day, so the
+// UI can weight it instead of showing thirty identical chips.
 export const skills = [
   {
-    category: "Languages & Libraries",
+    category: "Frontend",
+    icon: "code",
     items: [
-      "React.js", "Angular", "Next.js", "JavaScript", "TypeScript",
-      "HTML", "CSS", "SCSS", "RxJS", "NgRx", "Bootstrap", "Material UI", "Tailwind CSS", "Java",
+      { name: "React.js", core: true },
+      { name: "Angular", core: true },
+      { name: "TypeScript", core: true },
+      { name: "JavaScript", core: true },
+      { name: "Next.js" },
+      { name: "RxJS" },
+      { name: "NgRx" },
+      { name: "HTML" },
+      { name: "CSS" },
+      { name: "SCSS" },
+      { name: "Tailwind CSS" },
+      { name: "Material UI" },
+      { name: "Bootstrap" },
     ],
   },
   {
-    category: "Testing & Automation",
-    items: ["Karma", "Jasmine", "Playwright", "Selenium", "Robot Framework", "Cypress"],
+    category: "Backend & Testing",
+    icon: "server",
+    items: [
+      { name: "Java", core: true },
+      { name: "REST APIs", core: true },
+      { name: "Playwright", core: true },
+      { name: "Robot Framework" },
+      { name: "Selenium" },
+      { name: "Cypress" },
+      { name: "Karma" },
+      { name: "Jasmine" },
+    ],
   },
   {
-    category: "Development Tools",
-    items: ["Gulp", "Grunt", "WebPack", "Docker", "Kubernetes", "Git", "Mercurial", "Jenkins", "CI/CD"],
+    category: "Tooling & Delivery",
+    icon: "tool",
+    items: [
+      { name: "CI/CD", core: true },
+      { name: "Git", core: true },
+      { name: "Docker" },
+      { name: "Kubernetes" },
+      { name: "Jenkins" },
+      { name: "WebPack" },
+      { name: "Gulp" },
+      { name: "Grunt" },
+      { name: "Mercurial" },
+    ],
   },
 ];
 
 export const projects = [
   {
     title: "Sarkari Naukri",
-    icon: "newspaper",
     tech: ["Next.js", "React"],
     link: "https://naukari-lac.vercel.app/",
     previewLabel: "naukari-lac.vercel.app",
+    summary: "A live job portal I designed, built and shipped end to end.",
     points: [
       "Independent portal for verified Indian government job listings, sourced from official notifications.",
-      "Eligibility checker, smart filters, and full English/Hindi support.",
+      "Eligibility checker, smart filters, results and admit card access.",
+      "Full English/Hindi multilingual support across the whole product.",
     ],
   },
   {
     title: "Random JSON Data Generator",
-    icon: "package",
     tech: ["VS Code Extension API", "TypeScript"],
     link: "https://marketplace.visualstudio.com/items?itemName=SatyamSingh.randomjson",
     previewLabel: "marketplace.visualstudio.com",
+    summary: "A developer tool published on the VS Code Marketplace.",
     points: [
-      "VS Code extension that generates random JSON data for quick testing — 200+ installs, 5-star rating.",
+      "Generates random JSON data into a temp file for quick testing and development.",
+      "200+ installs with a 5-star rating on the Marketplace.",
       "Zero-config: run 'Json Data Generator' straight from the command palette.",
     ],
   },
