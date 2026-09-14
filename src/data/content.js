@@ -74,9 +74,9 @@ export const experience = [
     // Shown as a metric row inside this role's card, so each figure is
     // read against the work that produced it.
     metrics: [
-      { value: 75, suffix: "%", label: "fewer integration issues" },
-      { value: 40, suffix: "%", label: "faster data retrieval" },
-      { value: 30, suffix: "%", label: "faster load times" },
+      { value: 75, suffix: "%", label: "Fewer integration issues" },
+      { value: 40, suffix: "%", label: "Faster data retrieval" },
+      { value: 30, suffix: "%", label: "Faster load times" },
     ],
     // The figures live in `metrics` above — these describe the work
     // itself so the same numbers aren't stated twice in one card.

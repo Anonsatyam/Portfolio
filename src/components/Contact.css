@@ -6,18 +6,54 @@
 
 .contact__card {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   padding: clamp(2rem, 4.5vw, 2.75rem) 1.75rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+  transition: transform var(--transition-base), border-color var(--transition-base);
 }
 
 .contact__card:hover {
-  border-color: var(--brand, var(--color-accent));
-  box-shadow: 0 16px 40px -20px color-mix(in srgb, var(--brand, var(--color-accent)) 70%, transparent);
+  border-color: color-mix(in srgb, var(--brand, var(--color-accent)) 55%, transparent);
+}
+
+/* A brand-coloured light that follows the cursor across the card,
+   rather than the border simply switching colour on hover. */
+.contact__glow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    260px circle at var(--px, 50%) var(--py, 50%),
+    color-mix(in srgb, var(--brand, var(--color-accent)) 26%, transparent),
+    transparent 70%
+  );
+}
+
+.contact__card:hover .contact__glow {
+  opacity: 1;
+}
+
+/* Slides in from the corner to signal the card opens somewhere. */
+.contact__arrow {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  color: var(--brand, var(--color-accent));
+  opacity: 0;
+  transform: translate(-6px, 6px);
+  transition: opacity 0.3s ease, transform 0.3s var(--ease-premium);
+}
+
+.contact__card:hover .contact__arrow {
+  opacity: 1;
+  transform: translate(0, 0);
 }
 
 .contact__icon {
@@ -30,13 +66,15 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 1.25rem;
-  transition: background var(--transition-base), color var(--transition-base), transform var(--transition-base);
+  transition: background var(--transition-base), color var(--transition-base),
+    transform var(--transition-base), box-shadow var(--transition-base);
 }
 
 .contact__card:hover .contact__icon {
   background: var(--brand, var(--color-accent));
   color: var(--brand-contrast, #fff);
-  transform: scale(1.08);
+  transform: translateY(-4px) scale(1.06);
+  box-shadow: 0 12px 28px -10px color-mix(in srgb, var(--brand, var(--color-accent)) 80%, transparent);
 }
 
 .contact__label {
@@ -53,6 +91,12 @@
   font-weight: 600;
   color: var(--color-ink);
   word-break: break-word;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact__glow {
+    display: none;
+  }
 }
 
 @media (max-width: 760px) {

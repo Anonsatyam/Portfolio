@@ -1,8 +1,7 @@
-import { FiGithub, FiLinkedin } from "react-icons/fi";
+import { FiGithub, FiLinkedin, FiMail, FiArrowUpRight } from "react-icons/fi";
 import Reveal from "./Reveal";
 import AnimatedHeading from "./AnimatedHeading";
 import StaggerGroup, { StaggerItem } from "./StaggerGroup";
-import { FiMail } from "react-icons/fi";
 import { personal } from "../data/content";
 import "./Contact.css";
 
@@ -32,6 +31,15 @@ const links = [
 ];
 
 export default function Contact() {
+  // Feeds the card's brand-coloured glow, so it tracks the cursor
+  // instead of the whole border just switching colour on hover.
+  const trackPointer = (e) => {
+    const el = e.currentTarget;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--px", `${((e.clientX - r.left) / r.width) * 100}%`);
+    el.style.setProperty("--py", `${((e.clientY - r.top) / r.height) * 100}%`);
+  };
+
   return (
     <section id="contact" className="section section--alt contact">
       <div className="container">
@@ -55,11 +63,14 @@ export default function Contact() {
               href={link.href}
               target={link.href.startsWith("http") ? "_blank" : undefined}
               rel="noreferrer"
+              onMouseMove={trackPointer}
+              style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "#ffffff" }}
             >
-              <div
-                className="contact__icon"
-                style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "#ffffff" }}
-              >
+              <span className="contact__glow" aria-hidden="true" />
+              <span className="contact__arrow" aria-hidden="true">
+                <FiArrowUpRight size={16} />
+              </span>
+              <div className="contact__icon">
                 <link.Icon size={24} />
               </div>
               <div className="contact__label">{link.label}</div>
