@@ -67,12 +67,9 @@ export const experience = [
     location: "Noida, India",
     points: [
       "Spearheaded the design and development of the COTA dashboard using Angular 10, leading migration to Angular 14 and 18 to enhance performance and maintainability.",
-      "Created a React.js UI for OTA-FLY, enhancing user interactions and SIM management for telecom operators.",
       "Ensured 95% code coverage with Karma and Jasmine. Authored and standardized Global Goods Testing Standards (GGTS) using Selenium and Robot Framework, improving test consistency across teams.",
-      "Streamlined UI testing processes through successful implementation of Playwright; achieved a reduction in manual efforts of over 60%.",
       "Developed a CI/CD pipeline doubling release frequency and cutting integration issues by 75%.",
       "Engineered and deployed robust Java-based APIs targeting SIM service functionalities, improving data retrieval efficiency by 40% while ensuring seamless integration with existing systems.",
-      "Optimized NgRx for faster data retrieval, cutting load times by 30%.",
     ],
     tags: ["Angular", "Java", "NgRx", "Robot Framework", "CI/CD"],
   },
