@@ -98,15 +98,6 @@ export const skills = [
 
 export const projects = [
   {
-    title: "OTA Cloud",
-    tech: ["Angular 10/14/18", "Java", "NgRx"],
-    link: null,
-    points: [
-      "Engineered a responsive dashboard that streamlined Over The Air (OTA) update management, enhancing operational efficiency and reducing troubleshooting time by an average of 50 hours per month for the engineering team.",
-      "Migrated the application framework to Angular 18, enhancing code maintainability by reducing technical debt and increasing performance with faster load times under high user traffic.",
-    ],
-  },
-  {
     title: "Sarkari Naukri",
     tech: ["Next.js", "React"],
     link: "https://naukari-lac.vercel.app/",
