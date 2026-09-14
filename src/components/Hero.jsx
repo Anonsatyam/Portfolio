@@ -1,8 +1,15 @@
-import { motion } from "framer-motion";
 import { FiGithub, FiLinkedin, FiArrowDown, FiMail } from "react-icons/fi";
-import { personal } from "../data/content";
+import { personal, experience } from "../data/content";
 import { scrollToId } from "../lib/smoothScroll";
+import BlurReveal from "./BlurReveal";
+import HangingIDCard from "./HangingIDCard";
 import "./Hero.css";
+
+const [firstName, ...restName] = personal.name.split(" ");
+const lastName = restName.join(" ");
+const [designation, stackRaw] = personal.role.split("—").map((s) => s.trim());
+const stackLine = stackRaw ? stackRaw.split(",").join(" •").replace("&", "•") : "";
+const company = experience[0]?.company;
 
 export default function Hero() {
   const scrollTo = (id) => scrollToId(id);
@@ -16,95 +23,65 @@ export default function Hero() {
       </div>
 
       <div className="container hero__inner">
-        <motion.p
-          className="hero__eyebrow"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          👋 Hi, I'm
-        </motion.p>
+        <div className="hero__columns">
+          <div className="hero__content">
+            <BlurReveal as="p" className="hero__eyebrow" delay={0}>
+              Hello, I'm
+            </BlurReveal>
 
-        <motion.h1
-          className="hero__name"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-        >
-          {personal.name}
-        </motion.h1>
+            <h1 className="hero__name">
+              <BlurReveal as="span" className="hero__name-line" delay={0.1}>
+                {firstName}
+              </BlurReveal>
+              <BlurReveal as="span" className="hero__name-line" delay={0.18}>
+                {lastName}
+              </BlurReveal>
+            </h1>
 
-        <motion.div
-          className="hero__avatar"
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-        >
-          SK
-        </motion.div>
+            <BlurReveal as="h2" className="hero__role" delay={0.3}>
+              {designation}
+            </BlurReveal>
 
-        <motion.h2
-          className="hero__role"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-        >
-          {personal.role}
-        </motion.h2>
+            {company && (
+              <BlurReveal as="p" className="hero__company" delay={0.38}>
+                {company}
+              </BlurReveal>
+            )}
 
-        <motion.p
-          className="hero__tagline"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.3 }}
-        >
-          {personal.tagline}
-        </motion.p>
+            <BlurReveal as="p" className="hero__tagline" delay={0.46}>
+              {stackLine}
+            </BlurReveal>
 
-        <motion.div
-          className="hero__actions"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.4 }}
-        >
-          <button className="btn btn-primary" onClick={() => scrollTo("projects")}>
-            View My Work
-          </button>
-          <button className="btn btn-outline" onClick={() => scrollTo("contact")}>
-            Get In Touch
-          </button>
-        </motion.div>
+            <BlurReveal as="div" className="hero__actions" delay={0.56}>
+              <button className="btn btn-primary" onClick={() => scrollTo("projects")}>
+                View My Work
+              </button>
+              <button className="btn btn-outline" onClick={() => scrollTo("contact")}>
+                Get In Touch
+              </button>
+            </BlurReveal>
 
-        <motion.div
-          className="hero__socials"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.7, delay: 0.5 }}
-        >
-          <a href={personal.github} target="_blank" rel="noreferrer" aria-label="GitHub" className="is-github">
-            <FiGithub size={20} />
-          </a>
-          <a href={personal.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="is-linkedin">
-            <FiLinkedin size={20} />
-          </a>
-          <a href={`mailto:${personal.email}`} aria-label="Email" className="is-mail">
-            <FiMail size={20} />
-          </a>
-        </motion.div>
+            <BlurReveal as="div" className="hero__socials" delay={0.64}>
+              <a href={personal.github} target="_blank" rel="noreferrer" aria-label="GitHub" className="is-github">
+                <FiGithub size={20} />
+              </a>
+              <a href={personal.linkedin} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="is-linkedin">
+                <FiLinkedin size={20} />
+              </a>
+              <a href={`mailto:${personal.email}`} aria-label="Email" className="is-mail">
+                <FiMail size={20} />
+              </a>
+            </BlurReveal>
+          </div>
 
-        <motion.button
-          className="hero__scroll-hint"
-          onClick={() => scrollTo("about")}
-          aria-label="Scroll to About section"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, y: [0, 8, 0] }}
-          transition={{
-            opacity: { duration: 0.6, delay: 0.6 },
-            y: { duration: 1.6, repeat: Infinity, ease: "easeInOut", delay: 0.6 },
-          }}
-        >
+          <div className="hero__card-slot">
+            <HangingIDCard />
+          </div>
+        </div>
+
+        <button className="hero__scroll-hint" onClick={() => scrollTo("about")} aria-label="Scroll to About section">
           <FiArrowDown size={22} />
-        </motion.button>
+        </button>
       </div>
     </section>
   );

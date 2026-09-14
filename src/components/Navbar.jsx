@@ -53,6 +53,13 @@ export default function Navbar() {
               onClick={() => handleClick(link.to)}
             >
               {link.label}
+              {active === link.to && (
+                <motion.span
+                  className="navbar__indicator"
+                  layoutId="navbar-indicator"
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                />
+              )}
             </button>
           ))}
         </nav>

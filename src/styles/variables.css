@@ -15,8 +15,24 @@
   --color-accent-dark: #ff6b6b;
   --color-ink: #ffffff;
 
+  /* Semantic design-token aliases (premium-brief naming), mapped onto
+     the tokens above — new components should prefer these names. */
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --muted: var(--color-text-muted);
+  --accent: var(--color-accent);
+  --border: var(--color-border);
+  --surface: var(--color-surface);
+
   /* Typography */
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif;
+
+  /* Premium easing + timing, for the new interactive components */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-micro: 0.2s;
+  --duration-ui: 0.45s;
+  --duration-entrance: 0.8s;
 
   /* Fluid type scale */
   --fs-xs: clamp(0.75rem, 0.72rem + 0.15vw, 0.85rem);

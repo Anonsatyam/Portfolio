@@ -8,6 +8,7 @@ export const personal = {
   email: "satyamdeveloper98@gmail.com",
   linkedin: "https://in.linkedin.com/in/satyam-js",
   github: "https://github.com/Anonsatyam",
+  instagram: "https://www.instagram.com/satyam.js",
   resumeUrl: "/Satyam_Resume_React.pdf",
   tagline:
     "Building fast, reliable, and intuitive web experiences with clean, scalable code.",
