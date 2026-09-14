@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import Navbar from "./components/Navbar";
 import ScrollProgress from "./components/ScrollProgress";
+import Cursor from "./components/Cursor";
 import Hero from "./components/Hero";
 import About from "./components/About";
 import Experience from "./components/Experience";
@@ -8,10 +10,16 @@ import Projects from "./components/Projects";
 import Education from "./components/Education";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
+import { initSmoothScroll } from "./lib/smoothScroll";
 
 export default function App() {
+  useEffect(() => {
+    initSmoothScroll();
+  }, []);
+
   return (
     <>
+      <Cursor />
       <ScrollProgress />
       <Navbar />
       <main>

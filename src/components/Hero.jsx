@@ -1,13 +1,11 @@
 import { motion } from "framer-motion";
 import { FiGithub, FiLinkedin, FiArrowDown, FiMail } from "react-icons/fi";
 import { personal } from "../data/content";
+import { scrollToId } from "../lib/smoothScroll";
 import "./Hero.css";
 
 export default function Hero() {
-  const scrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollTo = (id) => scrollToId(id);
 
   return (
     <section id="hero" className="hero">

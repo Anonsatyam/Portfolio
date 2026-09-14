@@ -1,10 +1,11 @@
 import { FiArrowUp } from "react-icons/fi";
 import { FaHeart } from "react-icons/fa";
 import { personal } from "../data/content";
+import { scrollToTop } from "../lib/smoothScroll";
 import "./Footer.css";
 
 export default function Footer() {
-  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollTop = () => scrollToTop();
 
   return (
     <footer className="footer">

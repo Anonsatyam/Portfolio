@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FiMenu, FiX } from "react-icons/fi";
 import { navLinks, personal } from "../data/content";
 import useActiveSection from "../hooks/useActiveSection";
+import { scrollToId } from "../lib/smoothScroll";
 import "./Navbar.css";
 
 export default function Navbar() {
@@ -26,8 +27,7 @@ export default function Navbar() {
 
   const handleClick = (id) => {
     setOpen(false);
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+    scrollToId(id);
   };
 
   return (
