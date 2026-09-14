@@ -1,8 +1,14 @@
-import { FiCheckCircle } from "react-icons/fi";
+import { FiCheckCircle, FiLayout, FiServer, FiCheckSquare, FiWifi } from "react-icons/fi";
 import Reveal from "./Reveal";
-import AnimatedCounter from "./AnimatedCounter";
-import { about, stats } from "../data/content";
+import { about, whatIDo } from "../data/content";
 import "./About.css";
+
+const ICONS = {
+  layout: FiLayout,
+  server: FiServer,
+  check: FiCheckSquare,
+  wifi: FiWifi,
+};
 
 export default function About() {
   return (
@@ -29,15 +35,19 @@ export default function About() {
           </Reveal>
 
           <Reveal direction="left" delay={0.1}>
-            <div className="about__stats">
-              {stats.map((s, i) => (
-                <div className="about__stat card" key={i}>
-                  <div className="about__stat-value">
-                    <AnimatedCounter value={s.value} suffix={s.suffix} />
+            <div className="about__pillars">
+              {whatIDo.map((item, i) => {
+                const Icon = ICONS[item.icon];
+                return (
+                  <div className="about__pillar card" key={i}>
+                    <div className="about__pillar-icon">
+                      <Icon size={20} />
+                    </div>
+                    <h3 className="about__pillar-title">{item.title}</h3>
+                    <p className="about__pillar-desc">{item.description}</p>
                   </div>
-                  <div className="about__stat-label">{s.label}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Reveal>
         </div>

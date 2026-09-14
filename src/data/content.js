@@ -10,26 +10,42 @@ export const personal = {
   github: "https://github.com/Anonsatyam",
   resumeUrl: "/Satyam_Resume_React.pdf",
   tagline:
-    "I build fast, reliable web applications — from pixel-perfect React UIs to robust Java APIs — and love turning complex problems into clean, maintainable software.",
+    "Building fast, reliable, and intuitive web experiences with clean, scalable code.",
 };
-
-export const stats = [
-  { value: 95, suffix: "%", label: "Code Coverage Achieved" },
-  { value: 30, suffix: "%", label: "Faster Feature Delivery" },
-  { value: 25, suffix: "%", label: "Dashboard Perf. Boost" },
-  { value: 40, suffix: "%", label: "API Efficiency Gain" },
-];
 
 export const about = {
   summary:
-    "Software Engineer specializing in Angular, React.js, Java, and full-stack development. Currently working as a Full Stack React & Java Developer, building telecom-grade dashboards and APIs used to manage SIM provisioning and Over-The-Air (OTA) updates at scale.",
+    "Software Engineer specializing in Angular, React.js, Java, and full-stack development. Currently working as a Full Stack Developer, building scalable web applications and robust APIs for SIM, eSIM, and IoT device management, with a strong focus on performance, maintainability, and intuitive user experiences.",
   highlights: [
-    "Attained 95% code coverage with automated testing frameworks, enhancing software reliability.",
-    "Directed a specialized team to accelerate feature delivery by 30% through CI/CD pipeline implementation.",
-    "Boosted performance of the COTA dashboard by 25% after migrating to Angular 14 and 18.",
-    "Developed a React.js-based UI for OTA-FLY, optimizing user interactions and telecom SIM management.",
+    "I care about clean, maintainable code as much as working features — the kind the next developer (or future me) can actually read.",
+    "I like owning problems end-to-end: UI, backend APIs, and the test automation that keeps it all honest.",
+    "Right now I'm deep in IoT and eSIM connectivity, building on GSMA SGP.22/32 standards.",
+    "Outside my day job, I ship my own tools too — like a VS Code extension used by 200+ developers.",
   ],
 };
+
+export const whatIDo = [
+  {
+    icon: "layout",
+    title: "Frontend Engineering",
+    description: "Angular & React interfaces that are fast, accessible, and pixel-perfect.",
+  },
+  {
+    icon: "server",
+    title: "Backend & APIs",
+    description: "Java services and REST APIs built for reliability at scale.",
+  },
+  {
+    icon: "check",
+    title: "Testing & Automation",
+    description: "CI/CD pipelines and end-to-end suites that keep releases safe and fast.",
+  },
+  {
+    icon: "wifi",
+    title: "IoT & Connectivity",
+    description: "eSIM lifecycle and device connectivity built on GSMA standards.",
+  },
+];
 
 export const experience = [
   {

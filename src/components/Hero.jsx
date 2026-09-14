@@ -93,17 +93,21 @@ export default function Hero() {
             <FiMail size={20} />
           </a>
         </motion.div>
-      </div>
 
-      <motion.button
-        className="hero__scroll-hint"
-        onClick={() => scrollTo("about")}
-        aria-label="Scroll to About section"
-        animate={{ y: [0, 8, 0] }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <FiArrowDown size={22} />
-      </motion.button>
+        <motion.button
+          className="hero__scroll-hint"
+          onClick={() => scrollTo("about")}
+          aria-label="Scroll to About section"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, y: [0, 8, 0] }}
+          transition={{
+            opacity: { duration: 0.6, delay: 0.6 },
+            y: { duration: 1.6, repeat: Infinity, ease: "easeInOut", delay: 0.6 },
+          }}
+        >
+          <FiArrowDown size={22} />
+        </motion.button>
+      </div>
     </section>
   );
 }
