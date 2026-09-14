@@ -1,88 +1,97 @@
-import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { FiMapPin, FiCalendar } from "react-icons/fi";
-import Reveal from "./Reveal";
+import { useEffect, useRef, useState } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { FiMapPin, FiCalendar, FiArrowUpRight } from "react-icons/fi";
 import { experience } from "../data/content";
 import { ICONS_3D } from "../lib/icons3d";
+import JobModal from "./JobModal";
 import "./Experience.css";
 
+gsap.registerPlugin(ScrollTrigger);
+
 export default function Experience() {
-  const timelineRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: timelineRef,
-    offset: ["start 0.75", "end 0.35"],
-  });
-  const spineScale = useTransform(scrollYProgress, [0, 1], [0, 1]);
+  const sectionRef = useRef(null);
+  const trackRef = useRef(null);
+  const [activeJob, setActiveJob] = useState(null);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+
+    const ctx = gsap.context(() => {
+      const track = trackRef.current;
+      const section = sectionRef.current;
+      if (!track || !section) return;
+
+      const getDistance = () => track.scrollWidth - section.offsetWidth;
+
+      const tween = gsap.to(track, {
+        x: () => -getDistance(),
+        ease: "none",
+        scrollTrigger: {
+          trigger: section,
+          start: "top top",
+          end: () => `+=${Math.max(getDistance(), 1)}`,
+          scrub: 0.6,
+          pin: true,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      return () => tween.kill();
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, [reducedMotion]);
 
   return (
-    <section id="experience" className="section section--alt experience">
-      <div className="container">
-        <Reveal>
-          <div className="section-head">
-            <span className="eyebrow">Career Journey</span>
-            <h2 className="section-title">Experience</h2>
-          </div>
-        </Reveal>
+    <section
+      id="experience"
+      ref={sectionRef}
+      className={`experience-h section--alt ${reducedMotion ? "experience-h--static" : ""}`}
+    >
+      <div className="experience-h__head container">
+        <span className="eyebrow">Career Journey</span>
+        <h2 className="section-title">Experience</h2>
+        {!reducedMotion && (
+          <p className="section-subtitle">Scroll to move through the timeline — click a card for details.</p>
+        )}
+      </div>
 
-        <div className="experience__timeline" ref={timelineRef}>
-          <div className="experience__spine-track" aria-hidden="true">
-            <motion.div
-              className="experience__spine-fill"
-              style={{ scaleY: spineScale }}
-            />
-          </div>
-
-          {experience.map((job, i) => {
-            const side = i % 2 === 0 ? "right" : "left";
-            return (
-              <div className={`experience__row experience__row--${side}`} key={i}>
-                <div className="experience__spacer" aria-hidden="true" />
-
-                <motion.div
-                  className="experience__node"
-                  initial={{ scale: 0, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true, amount: 0.6 }}
-                  transition={{ duration: 0.45, delay: 0.15, ease: [0.34, 1.56, 0.64, 1] }}
-                >
-                  <img src={ICONS_3D.briefcase} alt="" width={26} height={26} loading="lazy" />
-                </motion.div>
-
-                <Reveal
-                  direction={side === "right" ? "left" : "right"}
-                  className="experience__card-wrap"
-                  delay={0.1}
-                >
-                  <div className="experience__item card">
-                    <div className="experience__top">
-                      <div>
-                        <h3 className="experience__role">{job.role}</h3>
-                        <p className="experience__company">{job.company}</p>
-                      </div>
-                      <div className="experience__meta">
-                        <span><FiCalendar size={14} /> {job.period}</span>
-                        <span><FiMapPin size={14} /> {job.location}</span>
-                      </div>
-                    </div>
-
-                    <ul className="experience__points">
-                      {job.points.map((p, idx) => (
-                        <li key={idx}>{p}</li>
-                      ))}
-                    </ul>
-
-                    <div className="experience__tags">
-                      {job.tags.map((tag) => (
-                        <span className="tag" key={tag}>{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                </Reveal>
+      <div className="experience-h__viewport">
+        <div className="experience-h__track" ref={trackRef}>
+          {experience.map((job, i) => (
+            <button
+              key={i}
+              type="button"
+              className="experience-h__card card"
+              onClick={() => setActiveJob(job)}
+            >
+              <div className="experience-h__card-top">
+                <img src={ICONS_3D.briefcase} alt="" width={36} height={36} loading="lazy" />
+                <FiArrowUpRight className="experience-h__expand" size={18} />
               </div>
-            );
-          })}
+
+              <h3 className="experience-h__role">{job.role}</h3>
+              <p className="experience-h__company">{job.company}</p>
+
+              <div className="experience-h__meta">
+                <span><FiCalendar size={13} /> {job.period}</span>
+                <span><FiMapPin size={13} /> {job.location}</span>
+              </div>
+
+              <span className="experience-h__hint">View details</span>
+            </button>
+          ))}
         </div>
       </div>
+
+      <JobModal job={activeJob} onClose={() => setActiveJob(null)} />
     </section>
   );
 }
