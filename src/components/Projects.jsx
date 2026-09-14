@@ -43,7 +43,7 @@ export default function Projects() {
       <div className="container">
         <Reveal>
           <div className="section-head">
-            <span className="eyebrow">My Work</span>
+            <span className="eyebrow"><span className="eyebrow__num">04</span>My Work</span>
             <AnimatedHeading as="h2" className="section-title" text="Featured Projects" />
             <p className="section-subtitle">
               A mix of enterprise dashboards, side projects, and tools I've designed, built, and shipped.

@@ -11,7 +11,7 @@ export default function Education() {
       <div className="container">
         <Reveal>
           <div className="section-head">
-            <span className="eyebrow">Background</span>
+            <span className="eyebrow"><span className="eyebrow__num">05</span>Background</span>
             <AnimatedHeading as="h2" className="section-title" text="Education & Accomplishments" />
           </div>
         </Reveal>

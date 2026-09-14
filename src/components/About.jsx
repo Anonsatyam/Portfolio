@@ -19,7 +19,7 @@ export default function About() {
       <div className="container">
         <Reveal>
           <div className="section-head">
-            <span className="eyebrow">About Me</span>
+            <span className="eyebrow"><span className="eyebrow__num">01</span>About Me</span>
             <AnimatedHeading as="h2" className="section-title" text="Who I Am" />
           </div>
         </Reveal>

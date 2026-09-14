@@ -208,6 +208,7 @@
     flex-direction: column;
     width: 100%;
   }
+  .hero__actions > span,
   .hero__actions .btn {
     width: 100%;
   }

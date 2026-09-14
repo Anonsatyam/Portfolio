@@ -29,7 +29,7 @@ export default function Skills() {
       <div className="container">
         <Reveal>
           <div className="section-head">
-            <span className="eyebrow">What I Know</span>
+            <span className="eyebrow"><span className="eyebrow__num">03</span>What I Know</span>
             <AnimatedHeading as="h2" className="section-title" text="Skills & Tools" />
           </div>
         </Reveal>

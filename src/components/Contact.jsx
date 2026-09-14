@@ -37,7 +37,7 @@ export default function Contact() {
       <div className="container">
         <Reveal>
           <div className="section-head">
-            <span className="eyebrow">Get In Touch</span>
+            <span className="eyebrow"><span className="eyebrow__num">06</span>Get In Touch</span>
             <AnimatedHeading as="h2" className="section-title" text="Let's Work Together" />
             <p className="section-subtitle">
               Have a project in mind or just want to connect? I'm always open to

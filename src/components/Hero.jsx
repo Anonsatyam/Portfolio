@@ -3,6 +3,7 @@ import { personal, experience } from "../data/content";
 import { scrollToId } from "../lib/smoothScroll";
 import BlurReveal from "./BlurReveal";
 import HangingIDCard from "./HangingIDCard";
+import MagneticButton from "./MagneticButton";
 import "./Hero.css";
 
 const [firstName, ...restName] = personal.name.split(" ");
@@ -53,12 +54,16 @@ export default function Hero() {
             </BlurReveal>
 
             <BlurReveal as="div" className="hero__actions" delay={0.56}>
-              <button className="btn btn-primary" onClick={() => scrollTo("projects")}>
-                View My Work
-              </button>
-              <button className="btn btn-outline" onClick={() => scrollTo("contact")}>
-                Get In Touch
-              </button>
+              <MagneticButton>
+                <button className="btn btn-primary" onClick={() => scrollTo("projects")}>
+                  View My Work
+                </button>
+              </MagneticButton>
+              <MagneticButton>
+                <button className="btn btn-outline" onClick={() => scrollTo("contact")}>
+                  Get In Touch
+                </button>
+              </MagneticButton>
             </BlurReveal>
 
             <BlurReveal as="div" className="hero__socials" delay={0.64}>
