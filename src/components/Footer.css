@@ -174,4 +174,11 @@
     justify-content: center;
     text-align: center;
   }
+
+  /* The centred text above would centre the short name line inside the
+     block, leaving it sitting right of the longer location line under
+     it. The brand keeps its own left alignment so the two line up. */
+  .footer__brand {
+    text-align: left;
+  }
 }
