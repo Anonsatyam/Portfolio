@@ -171,23 +171,19 @@
 }
 
 /* Walking: the alternating tetrapod. One set reaches and pulls while
-   the other is planted, then they trade — and the body rocks with it. */
+   the other is planted, then they trade — and the body rocks with it.
+   The period comes from --stride, written from the body's actual speed,
+   so the feet keep pace with the ground instead of skating over it. */
 .hero-spider__body.is-walking .hero-spider__legs path.is-a {
-  animation: spider-stride-a 0.34s ease-in-out infinite;
+  animation: spider-stride-a var(--stride, 0.34s) ease-in-out infinite;
 }
 
 .hero-spider__body.is-walking .hero-spider__legs path.is-b {
-  animation: spider-stride-b 0.34s ease-in-out infinite;
+  animation: spider-stride-b var(--stride, 0.34s) ease-in-out infinite;
 }
 
 .hero-spider__body.is-walking .hero-spider__svg {
-  animation: spider-haul 0.34s ease-in-out infinite;
-}
-
-/* Climbing takes more out of it than abseiling down. */
-.hero-spider__body.is-climbing .hero-spider__legs path,
-.hero-spider__body.is-climbing .hero-spider__svg {
-  animation-duration: 0.26s;
+  animation: spider-haul var(--stride, 0.34s) ease-in-out infinite;
 }
 
 /* Reach and recover, not a pendulum: the swing forward is quicker than

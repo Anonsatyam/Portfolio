@@ -272,7 +272,6 @@ export default function HeroSpider() {
   // on the line when hanging.
   const idleX = useMotionValue(0);
   const idleY = useMotionValue(0);
-  const idleSpin = useMotionValue(0);
   const bob = useMotionValue(0);
   // Kept separate from the bob so the two never cancel each other: this
   // is the occasional reel-up-and-drop while it is just hanging there.
@@ -309,11 +308,28 @@ export default function HeroSpider() {
     [offsetX, offsetY],
     ([x, y]) => (-Math.atan2(x, y) * 180) / Math.PI
   );
-  // Hanging, it aligns with its line; in the nest it turns as it walks.
-  const bodySpin = useTransform(
-    [threadAngle, idleSpin, retreatSpring],
-    ([a, sp, r]) => a * (1 - r) + sp * r
-  );
+  // Hanging, it aligns with its line; in the nest it faces wherever it
+  // is actually travelling. `facing` is fed from the velocity of the
+  // walk itself rather than animated alongside it — a heading derived
+  // from the motion cannot disagree with the motion, and blending
+  // through a spring means it turns *into* a move instead of pivoting
+  // on the spot first and then gliding off, which is what made it look
+  // mechanical.
+  const facingTo = useMotionValue(0);
+  // Soft on purpose: a stiffer spring swung it through 180 degrees in
+  // about 300ms, which read as flipping rather than turning.
+  const facing = useSpring(facingTo, { stiffness: 100, damping: 20, mass: 0.75 });
+  const bodySpin = useTransform([threadAngle, facing, retreatSpring], ([a, f, r]) => {
+    // `facing` accumulates whole turns as the spider walks, so that it
+    // always takes the short way round. Blending that raw number
+    // against the thread angle made the body spin through every turn it
+    // had banked — a 360 at full speed on the way up and another on the
+    // way down. Only its direction matters here, so fold it back to
+    // (-180, 180]. The fold is invisible: -180 and +180 render the same
+    // rotation, and this is a derived value, not an animated one.
+    const rel = f - Math.round(f / 360) * 360;
+    return a * (1 - r) + rel * r;
+  });
 
   // It should be hauling itself along the silk whenever it is moving —
   // climbing on the way up, walking down on the way down — rather than
@@ -323,7 +339,6 @@ export default function HeroSpider() {
   // is ~12px over half a second and eases out below any threshold worth
   // setting, so the nest walk states it outright instead.
   const walking = useRef(false);
-  const climbing = useRef(false);
   const hauled = useRef(false);
   const patrolling = useRef(false);
   const applyGait = () => {
@@ -336,19 +351,45 @@ export default function HeroSpider() {
       walking.current = moving;
       el.classList.toggle("is-walking", moving);
     }
-    const up = moving && offsetY.getVelocity() < -60;
-    if (up !== climbing.current) {
-      climbing.current = up;
-      el.classList.toggle("is-climbing", up);
-    }
   };
 
   const walkStop = useRef(null);
+  const stride = useRef(0);
   const onPace = () => {
     if (!rigOn) return;
+    const vx = offsetX.getVelocity();
+    const vy = offsetY.getVelocity();
+    const speed = Math.hypot(vx, vy);
     // Above the slow breathing bob (~10px/s) but below a gentle scroll,
     // so it strides for the whole ride and not while hanging still.
-    hauled.current = Math.hypot(offsetX.getVelocity(), offsetY.getVelocity()) > 15;
+    hauled.current = speed > 15;
+
+    // Point the body along its own velocity, accumulating the angle so
+    // it takes the short way round instead of unwinding 358 degrees
+    // every time atan2 wraps past ±180.
+    //
+    // Only while it is walking the web under its own steam. Steering on
+    // any movement meant that hauling itself up the dragline counted:
+    // velocity straight up reads as a heading of 180, so it turned to
+    // face up on the way home and back down again on the way out.
+    // Travel along the thread is the thread's business, not the legs'.
+    if (patrolling.current && speed > 18 && retreatSpring.get() > 0.6) {
+      const want = (-Math.atan2(vx, vy) * 180) / Math.PI;
+      const cur = facingTo.get();
+      facingTo.set(cur + ((((want - cur + 180) % 360) + 360) % 360) - 180);
+    }
+
+    // Step length is fixed, so the leg cycle has to scale with speed —
+    // otherwise the feet travel at a different rate from the ground and
+    // the legs read as decoration bolted to a sliding body.
+    const el = bodyRef.current;
+    if (el) {
+      const period = Math.min(0.46, Math.max(0.13, 15 / Math.max(1, speed)));
+      if (Math.abs(period - stride.current) > 0.02) {
+        stride.current = period;
+        el.style.setProperty("--stride", `${period.toFixed(3)}s`);
+      }
+    }
     applyGait();
     // `change` stops firing once it settles, so this needs its own way out.
     clearTimeout(walkStop.current);
@@ -407,31 +448,53 @@ export default function HeroSpider() {
     const over = (ms) => wait(ms);
 
     const EASE_TURN = [0.33, 0, 0.2, 1];
-    const EASE_WALK = [0.42, 0, 0.28, 1];
-    const SPEED = 46; // px per second, unhurried
+    const SPEED = 52; // px per second, unhurried
 
-    const turnTo = (heading, ms) => {
-      animate(idleSpin, heading, { duration: ms / 1000, ease: EASE_TURN });
-      return over(ms);
-    };
-
+    /**
+     * Crosses to a point in short darts rather than one long glide.
+     * A spider does not travel at a constant eased speed: it goes in
+     * bursts with a beat of stillness between them, and that cadence is
+     * most of what separates a creature from a tweened sprite.
+     *
+     * The destination is fixed, so this varies the rhythm of the
+     * journey, never its direction — the opposite of the random walk
+     * this replaced.
+     */
     const walkTo = async (tx, ty) => {
-      const dist = Math.hypot(tx - idleX.get(), ty - idleY.get());
+      const sx = idleX.get();
+      const sy = idleY.get();
+      const dist = Math.hypot(tx - sx, ty - sy);
       if (dist < 1) return;
-      const ms = Math.min(2200, Math.max(420, (dist / SPEED) * 1000));
+      const darts = Math.max(2, Math.min(4, Math.round(dist / 24)));
+
+      // Start the turn a beat before the feet, so it sets off already
+      // swinging round toward the destination rather than walking
+      // sideways until the velocity catches it up. Shortest way round.
+      const want = (-Math.atan2(tx - sx, ty - sy) * 180) / Math.PI;
+      const cur = facingTo.get();
+      facingTo.set(cur + ((((want - cur + 180) % 360) + 360) % 360) - 180);
+      await over(260);
+      if (!alive) return;
+
       patrolling.current = true;
       applyGait();
-      animate(idleX, tx, { duration: ms / 1000, ease: EASE_WALK });
-      animate(idleY, ty, { duration: ms / 1000, ease: EASE_WALK });
-      await over(ms);
+
+      for (let i = 1; i <= darts && alive; i += 1) {
+        const f = i / darts;
+        // Setting off is slow — that beat is when the body swings round
+        // to face the way it is going — and arriving eases out.
+        const ease =
+          i === 1 ? [0.62, 0, 0.3, 1] : i === darts ? [0.3, 0, 0.25, 1] : [0.35, 0, 0.3, 1];
+        const ms = Math.max(170, (dist / darts / SPEED) * 1000);
+        animate(idleX, sx + (tx - sx) * f, { duration: ms / 1000, ease });
+        animate(idleY, sy + (ty - sy) * f, { duration: ms / 1000, ease });
+        await over(ms);
+        if (i < darts) await over(60 + Math.random() * 120);
+      }
+
       patrolling.current = false;
       applyGait();
     };
-
-    // The body is drawn head-down, so its forward vector is +y, and CSS
-    // rotate() runs clockwise — hence the negation.
-    const headingTo = (tx, ty) =>
-      (-Math.atan2(tx - idleX.get(), ty - idleY.get()) * 180) / Math.PI;
 
     const errand = async () => {
       while (alive) {
@@ -452,10 +515,9 @@ export default function HeroSpider() {
         const r = NEST_R * (0.55 + Math.random() * 0.45);
         const [tx, ty] = point(ANGLES[spoke], r);
 
-        // Turn first, then travel. Walking out from the hub in a
-        // straight line is walking along a radial.
-        await turnTo(headingTo(tx, ty), 340);
-        if (!alive || bolted || Date.now() < spookedUntil) continue;
+        // No turn phase: the body swings round during the slow first
+        // dart, because its heading follows its velocity. Walking out
+        // from the hub in a straight line is walking along a radial.
         await walkTo(tx, ty);
         if (!alive || bolted || Date.now() < spookedUntil) continue;
 
@@ -468,13 +530,14 @@ export default function HeroSpider() {
         await wait(1300 + Math.random() * 800);
         if (!alive) return;
 
-        // Turn about, walk home, and settle facing down again by the
-        // shortest way round rather than unwinding the whole journey.
-        await turnTo(headingTo(0, 0), 380);
-        if (!alive) return;
+        // Walk home, then settle facing down again by the shortest way
+        // round rather than unwinding the whole journey's rotation.
         await walkTo(0, 0);
         if (!alive) return;
-        await turnTo(Math.round(idleSpin.get() / 360) * 360, 420);
+        animate(facingTo, Math.round(facingTo.get() / 360) * 360, {
+          duration: 0.5,
+          ease: EASE_TURN,
+        });
       }
     };
     errand();
@@ -516,10 +579,12 @@ export default function HeroSpider() {
       // happened to be standing when an errand was interrupted.
       if (want && bolted) {
         spookedUntil = Date.now() + 2600;
-        animate(idleX, 0, { duration: 0.45, ease: EASE_WALK });
-        animate(idleY, 0, { duration: 0.45, ease: EASE_WALK });
-        animate(idleSpin, Math.round(idleSpin.get() / 360) * 360, {
-          duration: 0.45,
+        // Scurrying home is fast, so its heading follows on its own;
+        // only the parked orientation needs stating.
+        animate(idleX, 0, { duration: 0.42, ease: [0.3, 0, 0.2, 1] });
+        animate(idleY, 0, { duration: 0.42, ease: [0.3, 0, 0.2, 1] });
+        animate(facingTo, Math.round(facingTo.get() / 360) * 360, {
+          duration: 0.62,
           ease: EASE_TURN,
         });
       }
