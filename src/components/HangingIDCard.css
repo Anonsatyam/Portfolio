@@ -261,7 +261,7 @@
    which squeezed the quote into a thin ribbon of text. */
 @media (max-width: 900px) {
   .id-card__wrap {
-    --card-w: clamp(240px, 64vw, 300px);
+    --card-w: clamp(270px, 74vw, 330px);
     min-height: 220px;
   }
 }

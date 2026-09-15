@@ -11,9 +11,13 @@
   pointer-events: none;
 }
 
+/* Overrides the width/height attributes on the element so the ring
+   scales with the container; the viewBox keeps it proportional. */
 .scroll-percent svg {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .scroll-percent__track {
@@ -42,8 +46,17 @@
   color: var(--color-text);
 }
 
+/* Shown on mobile too, just smaller — it was hidden here, which left
+   phones with no scroll indicator at all. */
 @media (max-width: 640px) {
   .scroll-percent {
-    display: none;
+    width: 38px;
+    height: 38px;
+  }
+
+  .scroll-percent__label {
+    width: 27px;
+    height: 27px;
+    font-size: 0.55rem;
   }
 }
