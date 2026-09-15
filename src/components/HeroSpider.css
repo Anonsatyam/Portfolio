@@ -248,14 +248,12 @@
   }
 }
 
-/* Below this the container has no gutter left of it, so a full-strength
-   web lays silk across the badge and the spider swings over the copy.
-   The web stays as faint corner texture; the spider steps out. */
+/* Below this the container has no gutter left of it, so the spider
+   would swing over the copy. It is not rendered at all below the same
+   breakpoint — see RIG_QUERY — because hiding it in CSS left every
+   spring and timer running against an element nobody could see.
+   The web stays behind as faint corner texture. */
 @media (max-width: 1399px) {
-  .hero-spider__rig {
-    display: none;
-  }
-
   /* Scaled rather than resized: the box size comes from an inline style,
      and scaling about the centre keeps the hub on the same point. */
   .hero-spider__web {

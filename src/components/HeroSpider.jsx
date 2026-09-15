@@ -179,12 +179,30 @@ const LEGS = [false, true].flatMap((flip) =>
   }))
 );
 
+// The spider needs a gutter beside the container to hang in. Below this
+// there isn't one, and it would swing over the copy.
+const RIG_QUERY = "(min-width: 1400px)";
+
 export default function HeroSpider() {
   const hubRef = useRef(null);
   const bodyRef = useRef(null);
   const [span, setSpan] = useState(1200); // hub → footer, measured
   const spanRef = useRef(span);
   spanRef.current = span;
+
+  // Whether the spider itself is in play. Hiding it in CSS was not
+  // enough: every spring, timer and observer went on running, writing
+  // ~60 style updates a second to an element nobody could see. Gating
+  // the mount stops the work rather than the paint.
+  const [rigOn, setRigOn] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(RIG_QUERY).matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(RIG_QUERY);
+    const sync = () => setRigOn(mq.matches);
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
   // How far it has lowered itself, in px below the hub.
   const rawDrop = useMotionValue(REST_DROP);
@@ -196,6 +214,7 @@ export default function HeroSpider() {
 
   const { scrollYProgress } = useScroll();
   const applyScroll = (v) => {
+    if (!rigOn) return;
     const target = REST_DROP + (spanRef.current - REST_DROP) * v;
     rawDrop.set(target + (HUB_DROP - target) * retreat.get());
   };
@@ -205,6 +224,7 @@ export default function HeroSpider() {
   // Measure the run from the hub down to the footer so the spider can
   // descend the whole page and stop on top of it.
   useEffect(() => {
+    if (!rigOn) return undefined;
     const measure = () => {
       const hub = hubRef.current;
       const footer = document.querySelector("footer");
@@ -228,7 +248,7 @@ export default function HeroSpider() {
       window.removeEventListener("resize", measure);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [rigOn]);
 
   // One source of truth for the pendulum: the spider's offset from
   // directly below the hub. The dragline's length and angle are both
@@ -322,6 +342,7 @@ export default function HeroSpider() {
 
   const walkStop = useRef(null);
   const onPace = () => {
+    if (!rigOn) return;
     // Above the slow breathing bob (~10px/s) but below a gentle scroll,
     // so it strides for the whole ride and not while hanging still.
     hauled.current = Math.hypot(offsetX.getVelocity(), offsetY.getVelocity()) > 15;
@@ -338,6 +359,7 @@ export default function HeroSpider() {
   useEffect(() => () => clearTimeout(walkStop.current), []);
 
   useEffect(() => {
+    if (!rigOn) return undefined;
     if (prefersReducedMotion()) {
       retreat.set(0);
       return undefined;
@@ -659,6 +681,7 @@ export default function HeroSpider() {
         />
       </svg>
 
+      {rigOn && (
       <div className="hero-spider__rig">
         {/* One dragline, pivoting at the hub. */}
         <motion.span
@@ -737,6 +760,7 @@ export default function HeroSpider() {
           </svg>
         </motion.div>
       </div>
+      )}
     </div>
   );
 }
