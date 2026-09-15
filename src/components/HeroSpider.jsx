@@ -319,7 +319,9 @@ export default function HeroSpider() {
 
   const walkStop = useRef(null);
   const onPace = () => {
-    hauled.current = Math.hypot(offsetX.getVelocity(), offsetY.getVelocity()) > 25;
+    // Above the slow breathing bob (~10px/s) but below a gentle scroll,
+    // so it strides for the whole ride and not while hanging still.
+    hauled.current = Math.hypot(offsetX.getVelocity(), offsetY.getVelocity()) > 15;
     applyGait();
     // `change` stops firing once it settles, so this needs its own way out.
     clearTimeout(walkStop.current);
@@ -350,65 +352,102 @@ export default function HeroSpider() {
       },
     });
 
-    // In the nest it patrols its own silk rather than drifting: out
-    // along a radial, round to a neighbouring one, back in toward the
-    // hub — the way a spider actually crosses a web — pausing between
-    // legs of the journey and turning to face wherever it is headed.
+    // An orb weaver sits at the hub and waits. It does not mill about.
+    // So the default here is parked and still, interrupted now and then
+    // by one deliberate errand: face a point on the web, walk straight
+    // out along that radial, lay a strand, turn, walk straight back.
+    //
+    // The previous version picked a random neighbouring spoke every
+    // second or so, which is a random walk and looked like one: no
+    // destination, no rhythm, and — the real tell — it started moving
+    // before it had finished turning, so it slid sideways. Nothing here
+    // translates until its heading has arrived.
     let fidget;
-    let spoke = 0;
-    let ringAt = 0.42; // fraction of the nest radius
-    const wander = () => {
-      const fromX = idleX.get();
-      const fromY = idleY.get();
-      if (Math.random() < 0.55) {
-        spoke = (spoke + (Math.random() < 0.5 ? 1 : SPOKES - 1)) % SPOKES;
-      } else {
-        ringAt = Math.min(0.96, Math.max(0.1, ringAt + (Math.random() < 0.5 ? 0.22 : -0.22)));
-      }
-      const [tx, ty] = point(ANGLES[spoke], NEST_R * ringAt);
-      const dist = Math.hypot(tx - fromX, ty - fromY);
-      const duration = Math.min(1.9, Math.max(0.45, dist / 58));
-      // Head first: the body is drawn head-down, so its forward vector
-      // is +y, and CSS rotate() runs clockwise.
-      const heading = (-Math.atan2(tx - fromX, ty - fromY) * 180) / Math.PI;
+    let alive = true;
+    // Declared up here because the errand loop reads them; they are
+    // written by the pointer handler and the unprompted-visit timer.
+    let bolted = false;
+    let visiting = false;
+    let inNest = true;
+    let spookedUntil = 0; // frozen for a beat after being driven off
+    const wait = (ms) =>
+      new Promise((resolve) => {
+        fidget = setTimeout(resolve, ms);
+      });
+    // Waits out the animation by the clock rather than on a completion
+    // callback, so an interruption can never strand the loop.
+    const over = (ms) => wait(ms);
 
-      const ease = [0.42, 0, 0.3, 1];
+    const EASE_TURN = [0.33, 0, 0.2, 1];
+    const EASE_WALK = [0.42, 0, 0.28, 1];
+    const SPEED = 46; // px per second, unhurried
+
+    const turnTo = (heading, ms) => {
+      animate(idleSpin, heading, { duration: ms / 1000, ease: EASE_TURN });
+      return over(ms);
+    };
+
+    const walkTo = async (tx, ty) => {
+      const dist = Math.hypot(tx - idleX.get(), ty - idleY.get());
+      if (dist < 1) return;
+      const ms = Math.min(2200, Math.max(420, (dist / SPEED) * 1000));
       patrolling.current = true;
       applyGait();
-      animate(idleX, tx, { duration, ease });
-      animate(idleY, ty, {
-        duration,
-        ease,
-        onComplete: () => {
-          patrolling.current = false;
-          applyGait();
-        },
-      });
-      animate(idleSpin, heading, { duration: duration * 0.6, ease });
-
-      // Having arrived somewhere, it sometimes works: a strand of
-      // capture spiral is laid across the sector it is standing in.
-      // The strand is generated from the web's own geometry, so it
-      // falls exactly on a line the web would have had anyway.
-      let pause = 260 + Math.random() * 900;
-      if (Math.random() < 0.45) {
-        const r = NEST_R * ringAt;
-        const next = (spoke + 1) % SPOKES;
-        setMend({
-          id: mendId.current++,
-          d: `M${fmt(point(ANGLES[spoke], r)[0])},${fmt(point(ANGLES[spoke], r)[1])}${strand(
-            spoke,
-            r,
-            next,
-            r,
-            1.055
-          )}`,
-        });
-        pause += 900;
-      }
-      fidget = setTimeout(wander, duration * 1000 + pause);
+      animate(idleX, tx, { duration: ms / 1000, ease: EASE_WALK });
+      animate(idleY, ty, { duration: ms / 1000, ease: EASE_WALK });
+      await over(ms);
+      patrolling.current = false;
+      applyGait();
     };
-    fidget = setTimeout(wander, 700);
+
+    // The body is drawn head-down, so its forward vector is +y, and CSS
+    // rotate() runs clockwise — hence the negation.
+    const headingTo = (tx, ty) =>
+      (-Math.atan2(tx - idleX.get(), ty - idleY.get()) * 180) / Math.PI;
+
+    const errand = async () => {
+      while (alive) {
+        // Sitting still is the default and most of the time. Short
+        // enough, though, that a whole errand fits inside one visit to
+        // the web rather than the spider arriving and doing nothing.
+        await wait(2400 + Math.random() * 3600);
+        if (!alive) return;
+        // Not while it is hanging, and not for a moment after a scare.
+        // The scare wears off even if the cursor stays parked nearby,
+        // otherwise resting a mouse near the web froze it permanently —
+        // which is exactly when someone is most likely to be watching.
+        if (retreat.get() < 0.5 || Date.now() < spookedUntil) continue;
+
+        const spoke = Math.floor(Math.random() * SPOKES);
+        const r = NEST_R * (0.55 + Math.random() * 0.45);
+        const [tx, ty] = point(ANGLES[spoke], r);
+
+        // Turn first, then travel. Walking out from the hub in a
+        // straight line is walking along a radial.
+        await turnTo(headingTo(tx, ty), 340);
+        if (!alive || Date.now() < spookedUntil) continue;
+        await walkTo(tx, ty);
+        if (!alive || Date.now() < spookedUntil) continue;
+
+        // Then it works: a strand of capture spiral laid across the
+        // sector it is standing in, generated from the web's own
+        // geometry so it falls exactly where a thread would have been.
+        const next = (spoke + 1) % SPOKES;
+        const [ax, ay] = point(ANGLES[spoke], r);
+        setMend({ id: mendId.current++, d: `M${fmt(ax)},${fmt(ay)}${strand(spoke, r, next, r, 1.055)}` });
+        await wait(1300 + Math.random() * 800);
+        if (!alive) return;
+
+        // Turn about, walk home, and settle facing down again by the
+        // shortest way round rather than unwinding the whole journey.
+        await turnTo(headingTo(0, 0), 380);
+        if (!alive) return;
+        await walkTo(0, 0);
+        if (!alive) return;
+        await turnTo(Math.round(idleSpin.get() / 360) * 360, 420);
+      }
+    };
+    errand();
 
     // While it is simply hanging there, it does almost nothing — and
     // then every so often reels itself up a few inches and drops back.
@@ -431,9 +470,6 @@ export default function HeroSpider() {
     // What the pointer wants and what the spider does on its own are
     // two independent reasons to be in the nest; one flag each, and one
     // place that acts on them.
-    let bolted = false;
-    let visiting = false;
-    let inNest = true;
     const settle = () => {
       const want = bolted || visiting;
       if (want === inNest) return;
@@ -446,6 +482,17 @@ export default function HeroSpider() {
         damping: bolted && want ? 22 : 15,
         mass: bolted && want ? 0.6 : 1,
       });
+      // Driven off the web, it runs for the hub — not for wherever it
+      // happened to be standing when an errand was interrupted.
+      if (want && bolted) {
+        spookedUntil = Date.now() + 2600;
+        animate(idleX, 0, { duration: 0.45, ease: EASE_WALK });
+        animate(idleY, 0, { duration: 0.45, ease: EASE_WALK });
+        animate(idleSpin, Math.round(idleSpin.get() / 360) * 360, {
+          duration: 0.45,
+          ease: EASE_TURN,
+        });
+      }
     };
 
     // Goes up to potter about in the web now and then unprompted —
@@ -461,14 +508,17 @@ export default function HeroSpider() {
           visiting = false;
           settle();
           scheduleVisit();
-        }, 6000 + Math.random() * 4000);
-      }, 12000 + Math.random() * 10000);
+          // Long enough for a full errand — turn, walk out, work, turn,
+          // walk back — with time either side to simply sit there.
+        }, 11000 + Math.random() * 6000);
+      }, 13000 + Math.random() * 10000);
     };
     scheduleVisit();
 
     const stop = () => {
       entrance.stop();
       breathe.stop();
+      alive = false;
       clearTimeout(fidget);
       clearTimeout(hitchTimer);
       clearTimeout(visitTimer);
