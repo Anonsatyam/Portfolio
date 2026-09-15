@@ -69,6 +69,13 @@
   opacity: 0.85;
 }
 
+/* Fresh silk: brighter than the web it is joining, and it fades to
+   nothing rather than staying as a permanent bright streak. */
+.hero-spider__mend {
+  stroke: #e8eaf0;
+  stroke-width: 1.4;
+}
+
 /* The dragline. One hair of silk, pivoting at the hub; its length comes
    from scaleY and its height is measured to the footer in JS. */
 .hero-spider__thread {
@@ -115,7 +122,8 @@
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transform-origin: 50px 56px;
+  /* The pivot is each leg's own joint, set inline from the geometry. */
+  transform-box: view-box;
 }
 
 .hero-spider__legs--far {
@@ -143,11 +151,12 @@
   opacity: 0.45;
 }
 
-.hero-spider__legs path:nth-child(odd) {
+/* Resting: the two tetrapod sets shift against each other, barely. */
+.hero-spider__legs path.is-a {
   animation: spider-twitch-a 4.5s ease-in-out infinite;
 }
 
-.hero-spider__legs path:nth-child(even) {
+.hero-spider__legs path.is-b {
   animation: spider-twitch-b 5.2s ease-in-out infinite;
 }
 
@@ -161,13 +170,13 @@
   54% { transform: rotate(-1.8deg); }
 }
 
-/* Moving along the silk: the two sets of legs alternate into a stride
-   instead of the idle twitch, and the body rocks with the effort. */
-.hero-spider__body.is-walking .hero-spider__legs path:nth-child(odd) {
+/* Walking: the alternating tetrapod. One set reaches and pulls while
+   the other is planted, then they trade — and the body rocks with it. */
+.hero-spider__body.is-walking .hero-spider__legs path.is-a {
   animation: spider-stride-a 0.34s ease-in-out infinite;
 }
 
-.hero-spider__body.is-walking .hero-spider__legs path:nth-child(even) {
+.hero-spider__body.is-walking .hero-spider__legs path.is-b {
   animation: spider-stride-b 0.34s ease-in-out infinite;
 }
 
@@ -176,20 +185,23 @@
 }
 
 /* Climbing takes more out of it than abseiling down. */
-.hero-spider__body.is-climbing .hero-spider__legs path:nth-child(odd),
-.hero-spider__body.is-climbing .hero-spider__legs path:nth-child(even),
+.hero-spider__body.is-climbing .hero-spider__legs path,
 .hero-spider__body.is-climbing .hero-spider__svg {
   animation-duration: 0.26s;
 }
 
+/* Reach and recover, not a pendulum: the swing forward is quicker than
+   the drag back, which is what makes a gait look like it has purpose. */
 @keyframes spider-stride-a {
-  0%, 100% { transform: rotate(-7deg); }
-  50% { transform: rotate(7deg); }
+  0% { transform: rotate(-9deg) translateY(0); }
+  35% { transform: rotate(9deg) translateY(-1px); }
+  100% { transform: rotate(-9deg) translateY(0); }
 }
 
 @keyframes spider-stride-b {
-  0%, 100% { transform: rotate(7deg); }
-  50% { transform: rotate(-7deg); }
+  0% { transform: rotate(9deg) translateY(-1px); }
+  35% { transform: rotate(-9deg) translateY(0); }
+  100% { transform: rotate(9deg) translateY(-1px); }
 }
 
 @keyframes spider-haul {

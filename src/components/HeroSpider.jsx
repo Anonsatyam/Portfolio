@@ -133,6 +133,9 @@ const REST_DROP = 150; // hanging, before any scrolling
 const FOOTER_GAP = 64; // stops just short of the footer
 const NEAR = 190; // how close the pointer gets before it bolts
 const MAX_SWAY = 16; // px the spider drifts either side of the hub
+// How far out into the web it will patrol. Capped well inside the
+// frame so it never walks over the hero copy.
+const NEST_R = 74;
 
 /**
  * Drawn hanging the way a spider actually hangs: abdomen uppermost,
@@ -152,10 +155,26 @@ const legPath = (p, flip) => {
   const X = (x) => (flip ? 100 - x : x);
   return `M${X(p[0])},${p[1]} Q${X(p[2])},${p[3]} ${X(p[4])},${p[5]} Q${X(p[6])},${p[7]} ${X(p[8])},${p[9]}`;
 };
-const LEGS = [
-  ...LEFT_LEGS.map((p) => legPath(p, false)),
-  ...LEFT_LEGS.map((p) => legPath(p, true)),
-];
+
+/**
+ * Spiders walk an alternating tetrapod: L1/R2/L3/R4 swing forward while
+ * R1/L2/R3/L4 are planted, then they trade. Swinging all eight together
+ * — or odd/even, which pairs each leg with its own neighbour — reads as
+ * a shiver rather than a walk.
+ *
+ * LEFT_LEGS runs back-to-front, so index 0 is leg 4 and index 3 is leg 1.
+ * Each leg also pivots on its own joint where it meets the body.
+ */
+const LEGS = [false, true].flatMap((flip) =>
+  LEFT_LEGS.map((p, i) => ({
+    d: legPath(p, flip),
+    // Attachment point, in viewBox units.
+    ox: flip ? 100 - p[0] : p[0],
+    oy: p[1],
+    // Leg number 1-4 counting from the front.
+    group: (4 - i + (flip ? 1 : 0)) % 2 === 0 ? "a" : "b",
+  }))
+);
 
 export default function HeroSpider() {
   const hubRef = useRef(null);
@@ -229,6 +248,12 @@ export default function HeroSpider() {
   const idleY = useMotionValue(0);
   const idleSpin = useMotionValue(0);
   const bob = useMotionValue(0);
+  // Kept separate from the bob so the two never cancel each other: this
+  // is the occasional reel-up-and-drop while it is just hanging there.
+  const hitch = useMotionValue(0);
+  // A strand it is repairing, replayed by changing the key.
+  const [mend, setMend] = useState(null);
+  const mendId = useRef(0);
 
   // ---- the only two numbers that matter -------------------------------
   // Where the spider is, measured from the hub. The body is placed here
@@ -241,8 +266,8 @@ export default function HeroSpider() {
     ([sway, ix, r]) => sway * (1 - r) + ix * r
   );
   const offsetY = useTransform(
-    [drop, idleY, bob, retreatSpring],
-    ([d, iy, b, r]) => d + iy * r + b * (1 - r)
+    [drop, idleY, bob, hitch, retreatSpring],
+    ([d, iy, b, h, r]) => d + iy * r + (b + h) * (1 - r)
   );
 
   const threadScale = useTransform(
@@ -264,30 +289,47 @@ export default function HeroSpider() {
     ([a, sp, r]) => a * (1 - r) + sp * r
   );
 
-  // It should be hauling itself along the silk whenever the silk is
-  // moving — climbing on the way up, walking down it on the way down —
-  // rather than gliding. Driven off the actual velocity so the gait
-  // matches however fast the page is being scrolled.
+  // It should be hauling itself along the silk whenever it is moving —
+  // climbing on the way up, walking down on the way down — rather than
+  // gliding. Two independent reasons to be moving its legs: the page is
+  // dragging it along the thread, or it is walking the web under its
+  // own steam. Velocity alone missed the second, because a patrol hop
+  // is ~12px over half a second and eases out below any threshold worth
+  // setting, so the nest walk states it outright instead.
   const walking = useRef(false);
-  const walkStop = useRef(null);
-  useMotionValueEvent(offsetY, "change", () => {
+  const climbing = useRef(false);
+  const hauled = useRef(false);
+  const patrolling = useRef(false);
+  const applyGait = () => {
     const el = bodyRef.current;
     if (!el) return;
-    const v = offsetY.getVelocity();
-    const moving = Math.abs(v) > 40;
+    // The nest walk runs continuously but is scaled to nothing while the
+    // spider is hanging, so it only counts as movement once it is home.
+    const moving = hauled.current || (patrolling.current && retreatSpring.get() > 0.3);
     if (moving !== walking.current) {
       walking.current = moving;
       el.classList.toggle("is-walking", moving);
-      el.classList.toggle("is-climbing", moving && v < 0);
     }
-    // `change` stops firing when it settles, so the class needs its own
-    // way out.
+    const up = moving && offsetY.getVelocity() < -60;
+    if (up !== climbing.current) {
+      climbing.current = up;
+      el.classList.toggle("is-climbing", up);
+    }
+  };
+
+  const walkStop = useRef(null);
+  const onPace = () => {
+    hauled.current = Math.hypot(offsetX.getVelocity(), offsetY.getVelocity()) > 25;
+    applyGait();
+    // `change` stops firing once it settles, so this needs its own way out.
     clearTimeout(walkStop.current);
     walkStop.current = setTimeout(() => {
-      walking.current = false;
-      el.classList.remove("is-walking", "is-climbing");
+      hauled.current = false;
+      applyGait();
     }, 140);
-  });
+  };
+  useMotionValueEvent(offsetX, "change", onPace);
+  useMotionValueEvent(offsetY, "change", onPace);
   useEffect(() => () => clearTimeout(walkStop.current), []);
 
   useEffect(() => {
@@ -303,22 +345,82 @@ export default function HeroSpider() {
       damping: 14,
       mass: 1,
       delay: 2.4,
+      onComplete: () => {
+        inNest = false;
+      },
     });
 
-    // Never quite still: short bursts of crawling with pauses between,
-    // the way a spider actually waits on its web.
+    // In the nest it patrols its own silk rather than drifting: out
+    // along a radial, round to a neighbouring one, back in toward the
+    // hub — the way a spider actually crosses a web — pausing between
+    // legs of the journey and turning to face wherever it is headed.
     let fidget;
-    let seed = 0;
+    let spoke = 0;
+    let ringAt = 0.42; // fraction of the nest radius
     const wander = () => {
-      seed += 1;
-      const a = seed * 2.399; // golden-angle walk, no repeats, no RNG
-      const r = 9 + ((seed * 7) % 22);
-      animate(idleX, Math.cos(a) * r, { duration: 1.1, ease: [0.4, 0, 0.2, 1] });
-      animate(idleY, Math.sin(a) * r * 0.85, { duration: 1.1, ease: [0.4, 0, 0.2, 1] });
-      animate(idleSpin, ((a * 30) % 46) - 23, { duration: 1.1, ease: [0.4, 0, 0.2, 1] });
-      fidget = setTimeout(wander, 1800 + ((seed * 530) % 1700));
+      const fromX = idleX.get();
+      const fromY = idleY.get();
+      if (Math.random() < 0.55) {
+        spoke = (spoke + (Math.random() < 0.5 ? 1 : SPOKES - 1)) % SPOKES;
+      } else {
+        ringAt = Math.min(0.96, Math.max(0.1, ringAt + (Math.random() < 0.5 ? 0.22 : -0.22)));
+      }
+      const [tx, ty] = point(ANGLES[spoke], NEST_R * ringAt);
+      const dist = Math.hypot(tx - fromX, ty - fromY);
+      const duration = Math.min(1.9, Math.max(0.45, dist / 58));
+      // Head first: the body is drawn head-down, so its forward vector
+      // is +y, and CSS rotate() runs clockwise.
+      const heading = (-Math.atan2(tx - fromX, ty - fromY) * 180) / Math.PI;
+
+      const ease = [0.42, 0, 0.3, 1];
+      patrolling.current = true;
+      applyGait();
+      animate(idleX, tx, { duration, ease });
+      animate(idleY, ty, {
+        duration,
+        ease,
+        onComplete: () => {
+          patrolling.current = false;
+          applyGait();
+        },
+      });
+      animate(idleSpin, heading, { duration: duration * 0.6, ease });
+
+      // Having arrived somewhere, it sometimes works: a strand of
+      // capture spiral is laid across the sector it is standing in.
+      // The strand is generated from the web's own geometry, so it
+      // falls exactly on a line the web would have had anyway.
+      let pause = 260 + Math.random() * 900;
+      if (Math.random() < 0.45) {
+        const r = NEST_R * ringAt;
+        const next = (spoke + 1) % SPOKES;
+        setMend({
+          id: mendId.current++,
+          d: `M${fmt(point(ANGLES[spoke], r)[0])},${fmt(point(ANGLES[spoke], r)[1])}${strand(
+            spoke,
+            r,
+            next,
+            r,
+            1.055
+          )}`,
+        });
+        pause += 900;
+      }
+      fidget = setTimeout(wander, duration * 1000 + pause);
     };
-    fidget = setTimeout(wander, 900);
+    fidget = setTimeout(wander, 700);
+
+    // While it is simply hanging there, it does almost nothing — and
+    // then every so often reels itself up a few inches and drops back.
+    // The stillness is what makes that read.
+    let hitchTimer;
+    const reel = () => {
+      hitchTimer = setTimeout(() => {
+        if (!inNest) animate(hitch, [0, -34, 3, 0], { duration: 2.1, ease: "easeInOut" });
+        reel();
+      }, 9000 + Math.random() * 8000);
+    };
+    reel();
 
     const breathe = animate(bob, [0, -7, 0, 5, 0], {
       duration: 7.5,
@@ -326,15 +428,55 @@ export default function HeroSpider() {
       ease: "easeInOut",
     });
 
+    // What the pointer wants and what the spider does on its own are
+    // two independent reasons to be in the nest; one flag each, and one
+    // place that acts on them.
+    let bolted = false;
+    let visiting = false;
+    let inNest = true;
+    const settle = () => {
+      const want = bolted || visiting;
+      if (want === inNest) return;
+      inNest = want;
+      if (want) entrance.stop(); // don't let the delayed entrance undo it
+      // Bolts home fast, creeps back down slowly.
+      animate(retreat, want ? 1 : 0, {
+        type: "spring",
+        stiffness: bolted && want ? 260 : 60,
+        damping: bolted && want ? 22 : 15,
+        mass: bolted && want ? 0.6 : 1,
+      });
+    };
+
+    // Goes up to potter about in the web now and then unprompted —
+    // otherwise the nest behaviour only ever shows if you chase it
+    // there with the cursor.
+    let visitTimer;
+    let leaveTimer;
+    const scheduleVisit = () => {
+      visitTimer = setTimeout(() => {
+        visiting = true;
+        settle();
+        leaveTimer = setTimeout(() => {
+          visiting = false;
+          settle();
+          scheduleVisit();
+        }, 6000 + Math.random() * 4000);
+      }, 12000 + Math.random() * 10000);
+    };
+    scheduleVisit();
+
     const stop = () => {
       entrance.stop();
       breathe.stop();
       clearTimeout(fidget);
+      clearTimeout(hitchTimer);
+      clearTimeout(visitTimer);
+      clearTimeout(leaveTimer);
     };
 
     if (!window.matchMedia("(pointer: fine)").matches) return stop;
 
-    let bolted = false;
     const onMove = (e) => {
       const el = bodyRef.current;
       if (!el) return;
@@ -342,23 +484,14 @@ export default function HeroSpider() {
       const dx = e.clientX - (r.left + r.width / 2);
       const dy = e.clientY - (r.top + r.height / 2);
       pointerX.set(Math.max(-320, Math.min(320, dx)));
-
-      const near = Math.hypot(dx, dy) < NEAR;
-      if (near === bolted) return;
-      bolted = near;
-      // Bolts home fast, creeps back down slowly.
-      animate(retreat, near ? 1 : 0, {
-        type: "spring",
-        stiffness: near ? 260 : 55,
-        damping: near ? 22 : 15,
-        mass: near ? 0.6 : 1,
-      });
+      bolted = Math.hypot(dx, dy) < NEAR;
+      settle();
     };
 
     const onLeave = () => {
       pointerX.set(0);
       bolted = false;
-      animate(retreat, 0, { type: "spring", stiffness: 55, damping: 15, mass: 1 });
+      settle();
     };
 
     window.addEventListener("mousemove", onMove, { passive: true });
@@ -433,6 +566,22 @@ export default function HeroSpider() {
           transition={{ duration: 2.6, delay: 2, ease: [0.33, 0, 0.2, 1] }}
         />
 
+        {/* Silk being laid right now: drawn bright, then settling back
+            into the rest of the web. */}
+        {mend && (
+          <motion.path
+            key={mend.id}
+            className="hero-spider__mend"
+            d={mend.d}
+            initial={{ pathLength: 0, opacity: 0.95 }}
+            animate={{ pathLength: 1, opacity: 0 }}
+            transition={{
+              pathLength: { duration: 0.85, ease: [0.16, 1, 0.3, 1] },
+              opacity: { duration: 1.6, delay: 0.7, ease: "easeOut" },
+            }}
+          />
+        )}
+
         <motion.path
           className="hero-spider__hubmesh"
           d={HUB_D}
@@ -493,24 +642,20 @@ export default function HeroSpider() {
 
             {/* Far-side legs sit behind the body in a darker tone — the
                 cheapest honest depth cue there is. */}
-            <g className="hero-spider__legs hero-spider__legs--far">
-              {LEGS.map((d, i) => (
-                <path key={`far-${i}`} d={d} />
-              ))}
-            </g>
-
-            <g className="hero-spider__legs hero-spider__legs--main">
-              {LEGS.map((d, i) => (
-                <path key={`leg-${i}`} d={d} />
-              ))}
-            </g>
-
-            {/* A highlight rolled along the top of each leg. */}
-            <g className="hero-spider__legs hero-spider__legs--sheen">
-              {LEGS.map((d, i) => (
-                <path key={`sheen-${i}`} d={d} />
-              ))}
-            </g>
+            {["far", "main", "sheen"].map((layer) => (
+              <g key={layer} className={`hero-spider__legs hero-spider__legs--${layer}`}>
+                {LEGS.map((leg, i) => (
+                  <path
+                    key={`${layer}-${i}`}
+                    d={leg.d}
+                    className={`is-${leg.group}`}
+                    /* Each leg swings on the joint where it meets the
+                       body, not on the body's centre. */
+                    style={{ transformOrigin: `${leg.ox}px ${leg.oy}px` }}
+                  />
+                ))}
+              </g>
+            ))}
 
             <ellipse className="hero-spider__abdomen" cx="50" cy="34" rx="16" ry="19" />
             <ellipse className="hero-spider__gloss" cx="43" cy="25" rx="6" ry="8.5" />
