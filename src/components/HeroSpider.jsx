@@ -156,9 +156,114 @@ const THREAD_PX = 1024;
  */
 const WIDE_QUERY = "(min-width: 1400px)";
 const LAYOUTS = {
-  wide: { scale: 1, mirror: 1, rest: 150, sway: 16, flee: 120 },
-  compact: { scale: 0.45, mirror: -1, rest: 112, sway: 9, flee: 90 },
+  // `size` is the spider's rendered width, matching --spider-size.
+  wide: { scale: 1, mirror: 1, rest: 150, sway: 16, flee: 120, size: 52 },
+  compact: { scale: 0.45, mirror: -1, rest: 112, sway: 9, flee: 90, size: 30 },
 };
+
+/* ------------------------------------------------------------------ *
+ * The web throw
+ *
+ * Every ten seconds, while it is simply hanging in view of the name, it
+ * throws a strand at it. The strand splats into a small sticky web,
+ * holds, lets go, and the web slides down the letters and falls away.
+ * ------------------------------------------------------------------ */
+const THROW_EVERY = 10000;
+const THROW_RETRY = 2000; // when the moment isn't right, look again soon
+const THROW_MAX = 900; // px; further than this and it isn't a throw
+// Head position down the body, as a fraction of the spider's width:
+// eyes at 64/92 of the drawing's height, less the 0.135 lift.
+const HEAD_AT = (64 / 92) * (92 / 100) - 0.135;
+
+// The slip and the fall are one continuous timeline on a single 0-1
+// progress value, so the web's velocity carries straight from sliding
+// into falling with no hitch where one would hand over to the other.
+const DROP_MS = 1750;
+const DETACH = 0.42; // point in the timeline where it lets go of the letters
+const CREEP = 14; // px it slides while still clinging on
+const FALL = 250; // px it falls after that
+
+/**
+ * Vertical position through the drop.
+ *
+ * Clinging on, it creeps: adhesion gives way gradually, so it starts
+ * almost still and accelerates (a power curve). Once it lets go it
+ * keeps the speed it had and falls under constant acceleration. The
+ * two pieces meet with matching position and velocity.
+ */
+function dropY(s) {
+  const n = 2.5;
+  if (s <= DETACH) return CREEP * (s / DETACH) ** n;
+  const v0 = (CREEP * n) / DETACH; // velocity at the moment it lets go
+  const t = s - DETACH;
+  const coast = v0 * t;
+  const gravity = (FALL - v0 * (1 - DETACH)) / (1 - DETACH) ** 2;
+  return CREEP + coast + gravity * t * t;
+}
+
+/** How far into the free fall, 0 until it lets go. */
+const fallPart = (s) => Math.max(0, (s - DETACH) / (1 - DETACH));
+
+/**
+ * The thrown line: a quadratic from the spider to the target, bowed by
+ * `arc` px perpendicular to the chord. Positive bows it up — the arc of
+ * something thrown — zero is taut, negative sags like slack silk.
+ */
+function shotCurve(ox, oy, tx, ty, arc) {
+  const dx = tx - ox;
+  const dy = ty - oy;
+  const len = Math.hypot(dx, dy) || 1;
+  // Unit normal on the upper side of the chord, whichever way it runs.
+  let nx = -dy / len;
+  let ny = dx / len;
+  if (ny > 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  // The control point sits at twice the bow, so the curve's midpoint is
+  // exactly `arc` px off the chord.
+  const cx = (ox + tx) / 2 + nx * arc * 2;
+  const cy = (oy + ty) / 2 + ny * arc * 2;
+  return { cx, cy };
+}
+
+/** A point on the thrown line, t in 0-1. */
+function shotPoint(ox, oy, cx, cy, tx, ty, t) {
+  const u = 1 - t;
+  return [u * u * ox + 2 * u * t * cx + t * t * tx, u * u * oy + 2 * u * t * cy + t * t * ty];
+}
+
+/**
+ * A splat of sticky web. Irregular strands from a central glob, laced
+ * with two rings pulled taut toward the centre, and beads of silk at
+ * the strand ends. Fresh randomness every throw, so no two splats match.
+ */
+function makeSplat() {
+  const count = 7 + Math.floor(Math.random() * 2);
+  const strands = Array.from({ length: count }, (_, i) => {
+    const a = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+    const r = 15 + Math.random() * 15;
+    return { a, r, x: Math.cos(a) * r, y: Math.sin(a) * r };
+  });
+  // Rings sag inward between strands, the way a stretched net does.
+  const ring = (f) => {
+    let d = "";
+    strands.forEach((s, i) => {
+      const n = strands[(i + 1) % count];
+      const [x0, y0] = [s.x * f, s.y * f];
+      const [x1, y1] = [n.x * f, n.y * f];
+      const mx = ((x0 + x1) / 2) * 0.82;
+      const my = ((y0 + y1) / 2) * 0.82;
+      d += `${i === 0 ? `M${fmt(x0)},${fmt(y0)}` : ""}Q${fmt(mx)},${fmt(my)} ${fmt(x1)},${fmt(y1)}`;
+    });
+    return d;
+  };
+  return {
+    spokes: strands.map((s) => `M0,0L${fmt(s.x)},${fmt(s.y)}`).join(""),
+    rings: [ring(0.45), ring(0.78)],
+    beads: strands.filter((_, i) => i % 2 === 0).map((s) => [s.x, s.y]),
+  };
+}
 
 /**
  * Drawn hanging the way a spider actually hangs: abdomen uppermost,
@@ -294,6 +399,9 @@ export default function HeroSpider() {
   // going home when the nest is far off-screen. Also separate, so none
   // of these three ever cancel another.
   const flee = useMotionValue(0);
+  // Recoil from throwing, kicked away from the throw direction.
+  const kickX = useMotionValue(0);
+  const kickY = useMotionValue(0);
   // A strand it is repairing, replayed by changing the key.
   const [mend, setMend] = useState(null);
   const mendId = useRef(0);
@@ -305,13 +413,78 @@ export default function HeroSpider() {
   // idle crawl moved the body without moving the thread, which is the
   // gap visible after the spider climbs home.)
   const offsetX = useTransform(
-    [swayRaw, idleX, retreatSpring],
-    ([sway, ix, r]) => sway * (1 - r) + ix * r
+    [swayRaw, idleX, kickX, retreatSpring],
+    ([sway, ix, k, r]) => (sway + k) * (1 - r) + ix * r
   );
   const offsetY = useTransform(
-    [drop, idleY, bob, hitch, flee, retreatSpring],
-    ([d, iy, b, h, f, r]) => d + iy * r + (b + h + f) * (1 - r)
+    [drop, idleY, bob, hitch, flee, kickY, retreatSpring],
+    ([d, iy, b, h, f, k, r]) => d + iy * r + (b + h + f + k) * (1 - r)
   );
+
+  // ---- the throw ------------------------------------------------------
+  // Geometry fixed at the moment of the throw — where the hub is and
+  // where the strand is aimed — in stage coordinates. The spider's end is
+  // not fixed: it is read live from offsetX/offsetY, the same two numbers
+  // that place the body, so the strand stays attached through the recoil
+  // and any sway, exactly as the dragline does.
+  const stageRef = useRef(null);
+  const shotRef = useRef(null);
+  const [shot, setShot] = useState(null);
+  const shotLen = useMotionValue(0); // visible fraction, from the spider out
+  const shotArc = useMotionValue(0); // bow of the strand; see shotCurve
+  const tipShow = useMotionValue(0); // the glob leading the strand in flight
+  const netPop = useMotionValue(0); // impact: splat springing open
+  const dropT = useMotionValue(0); // slip-then-fall timeline, 0-1
+
+  const shotGeom = (x, y, arc) => {
+    const g = shotRef.current;
+    if (!g) return null;
+    // From the spider's head — it hangs head down, so the front of it is
+    // near the bottom of the body: the eyes sit at 64/92 of its height,
+    // less the lift that tucks the body up onto its dragline.
+    const ox = g.hubX + x;
+    const oy = g.hubY + y + g.size * HEAD_AT;
+    return { ox, oy, ...shotCurve(ox, oy, g.tx, g.ty, arc) };
+  };
+  const shotD = useTransform([offsetX, offsetY, shotArc], ([x, y, arc]) => {
+    const c = shotGeom(x, y, arc);
+    return c ? `M${fmt(c.ox)},${fmt(c.oy)}Q${fmt(c.cx)},${fmt(c.cy)} ${fmt(shotRef.current.tx)},${fmt(shotRef.current.ty)}` : "M0,0";
+  });
+  const tipPos = useTransform([offsetX, offsetY, shotArc, shotLen], ([x, y, arc, len]) => {
+    const c = shotGeom(x, y, arc);
+    return c ? shotPoint(c.ox, c.oy, c.cx, c.cy, shotRef.current.tx, shotRef.current.ty, len) : [0, 0];
+  });
+  // Hidden outright at zero length. A zero-length dash with round caps
+  // still paints a dot at each end of the path, which left a stray pixel
+  // on the spider and another on the name after the strand was reeled in.
+  const shotShow = useTransform(shotLen, (v) => (v > 0.003 ? 1 : 0));
+  const tipX = useTransform(tipPos, (p) => p[0]);
+  const tipY = useTransform(tipPos, (p) => p[1]);
+
+  // Everything about the falling web derives from the one timeline, so
+  // position, twist, flutter, crumple and fade can never fall out of step.
+  const netX = useTransform(dropT, (s) => {
+    const f = fallPart(s);
+    const side = shotRef.current?.side ?? 1;
+    // Light things don't drop straight: it flutters side to side, more
+    // as it picks up speed, and drifts the way it was twisting.
+    return Math.sin(f * Math.PI * 3.2) * 9 * f + side * 20 * f * f;
+  });
+  const netY = useTransform(dropT, dropY);
+  const netRot = useTransform(dropT, (s) => {
+    const side = shotRef.current?.side ?? 1;
+    const cling = Math.min(1, s / DETACH);
+    const f = fallPart(s);
+    return side * (7 * cling * cling + 48 * f ** 1.4) + Math.sin(f * Math.PI * 3.2) * 9 * f;
+  });
+  const netScaleX = useTransform([dropT, netPop], ([s, pop]) => pop * (1 - 0.16 * fallPart(s)));
+  const netScaleY = useTransform([dropT, netPop], ([s, pop]) => {
+    const f = fallPart(s);
+    // Sags as it slips, then crumples as it falls, breathing with the flutter.
+    const cling = Math.min(1, s / DETACH);
+    return pop * (1 - 0.1 * cling - 0.32 * f + 0.07 * Math.sin(f * Math.PI * 3.2));
+  });
+  const netFade = useTransform(dropT, [0, 0.72, 1], [1, 1, 0]);
 
   const threadScale = useTransform([offsetX, offsetY], ([x, y]) => Math.hypot(x, y) / THREAD_PX);
   // Measured from straight down, which is where the unrotated element
@@ -452,6 +625,7 @@ export default function HeroSpider() {
     let visiting = false;
     let inNest = true;
     let spookedUntil = 0; // frozen for a beat after being driven off
+    let throwing = false; // a web throw is in progress
     const wait = (ms) =>
       new Promise((resolve) => {
         fidget = setTimeout(resolve, ms);
@@ -575,7 +749,8 @@ export default function HeroSpider() {
     let hitchTimer;
     const reel = () => {
       hitchTimer = setTimeout(() => {
-        if (!inNest) animate(hitch, [0, -34, 3, 0], { duration: 2.1, ease: "easeInOut" });
+        // Not mid-throw: reeling up would drag the strand off its aim.
+        if (!inNest && !throwing) animate(hitch, [0, -34, 3, 0], { duration: 2.1, ease: "easeInOut" });
         reel();
       }, 9000 + Math.random() * 8000);
     };
@@ -627,7 +802,7 @@ export default function HeroSpider() {
       visitTimer = setTimeout(() => {
         // Only while the reader can actually see the nest. Further down
         // the page it stays with them on its line.
-        if (!nestInView(60)) {
+        if (!nestInView(60) || throwing) {
           scheduleVisit();
           return;
         }
@@ -702,6 +877,185 @@ export default function HeroSpider() {
       }
     };
 
+    // ---- the web throw ----------------------------------------------------
+    // Its own timers, so cleanup can cancel every one of them; the errand
+    // loop's `wait` only ever keeps hold of its latest handle.
+    const pending = new Set();
+    const later = (ms) =>
+      new Promise((resolve) => {
+        const id = setTimeout(() => {
+          pending.delete(id);
+          resolve();
+        }, ms);
+        pending.add(id);
+      });
+    // Anything that takes the spider off its line ends a throw early.
+    const interrupted = () => !alive || inNest || fleeing;
+    let throwTimer;
+    let throwId = 0;
+
+    /** Where to throw, or null when this isn't the moment. */
+    const aim = () => {
+      const stage = stageRef.current;
+      const hub = hubRef.current;
+      const line =
+        document.querySelector(".hero__name-white .hero__name-line") ||
+        document.querySelector(".hero__name");
+      if (!stage || !hub || !line) return null;
+      const lr = line.getBoundingClientRect();
+      // The name has to be properly on screen to be worth aiming at.
+      if (lr.width < 20 || lr.bottom < 90 || lr.top > window.innerHeight - 60) return null;
+
+      const sr = stage.getBoundingClientRect();
+      const hr = hub.getBoundingClientRect();
+      const { size } = layoutRef.current;
+      const hubX = hr.left - sr.left;
+      const hubY = hr.top - sr.top;
+      // Somewhere on the letters rather than one fixed spot.
+      const tx = lr.left - sr.left + lr.width * (0.3 + Math.random() * 0.4);
+      const ty = lr.top - sr.top + lr.height * (0.42 + Math.random() * 0.16);
+      const ox = hubX + offsetX.get();
+      const oy = hubY + offsetY.get() + size * HEAD_AT;
+      const dist = Math.hypot(tx - ox, ty - oy);
+      if (dist < 60 || dist > THROW_MAX) return null;
+
+      // Never through the ID card. On two-column layouts below the wide
+      // breakpoint it sits squarely between the spider and the name, and
+      // silk flying through it looks like a bug, not a throw. Both the
+      // arcing flight path and the taut strand after are checked.
+      const card = document.querySelector(".id-card__card")?.getBoundingClientRect();
+      if (card && card.width) {
+        const pad = 14;
+        const box = [card.left - sr.left - pad, card.right - sr.left + pad, card.top - sr.top - pad, card.bottom - sr.top + pad];
+        const { cx, cy } = shotCurve(ox, oy, tx, ty, dist * 0.14);
+        for (let i = 1; i < 24; i += 1) {
+          const t = i / 24;
+          for (const [x, y] of [shotPoint(ox, oy, cx, cy, tx, ty, t), [ox + (tx - ox) * t, oy + (ty - oy) * t]]) {
+            if (x > box[0] && x < box[1] && y > box[2] && y < box[3]) return null;
+          }
+        }
+      }
+      return { hubX, hubY, tx, ty, ox, oy, dist, size, side: tx < ox ? -1 : 1 };
+    };
+
+    // The name takes the hit: a 2-3px knock in the direction of the throw.
+    const knockName = (ux, uy) => {
+      document.querySelector(".hero__name")?.animate?.(
+        [
+          { transform: "translate(0, 0)" },
+          { transform: `translate(${(ux * 2.5).toFixed(2)}px, ${(uy * 2.5).toFixed(2)}px)` },
+          { transform: "translate(0, 0)" },
+        ],
+        { duration: 300, easing: "cubic-bezier(0.2, 0.7, 0.3, 1)" }
+      );
+    };
+
+    const settleKick = () => {
+      animate(kickX, 0, { type: "spring", stiffness: 140, damping: 14 });
+      animate(kickY, 0, { type: "spring", stiffness: 140, damping: 14 });
+    };
+
+    const finish = () => {
+      settleKick();
+      shotLen.set(0);
+      tipShow.set(0);
+      netPop.set(0);
+      dropT.set(0);
+      shotRef.current = null;
+      if (alive) setShot(null);
+      throwing = false;
+    };
+
+    /** Resolves true if a throw happened. */
+    const throwWeb = async () => {
+      if (throwing || interrupted() || document.hidden) return false;
+      // Hanging still, not mid-climb or being hauled along by a scroll.
+      if (retreat.get() > 0.02 || Math.abs(offsetY.getVelocity()) > 40) return false;
+      const g = aim();
+      if (!g) return false;
+
+      throwing = true;
+      shotRef.current = g;
+      const ux = (g.tx - g.ox) / g.dist;
+      const uy = (g.ty - g.oy) / g.dist;
+      shotLen.set(0);
+      shotArc.set(g.dist * 0.14);
+      tipShow.set(0);
+      netPop.set(0);
+      dropT.set(0);
+      setShot({
+        id: (throwId += 1),
+        splat: makeSplat(),
+        tx: g.tx,
+        ty: g.ty,
+        // The splat spreads along the line of flight, not evenly.
+        angle: (Math.atan2(uy, ux) * 180) / Math.PI,
+      });
+
+      // 1. Wind-up: it draws back, away from the name.
+      animate(kickX, -ux * 7, { duration: 0.22, ease: [0.3, 0, 0.2, 1] });
+      animate(kickY, -uy * 7 - 3, { duration: 0.22, ease: [0.3, 0, 0.2, 1] });
+      await later(230);
+      if (interrupted()) {
+        finish();
+        return true;
+      }
+
+      // 2. Throw. The glob leads with the strand paying out behind it —
+      // fastest off the spider and slowing as it flies — while the arc it
+      // was thrown on flattens as the strand pulls itself straight. The
+      // spider lunges with the throw and swings back on its thread.
+      const flight = Math.min(0.42, Math.max(0.2, g.dist / 1500));
+      tipShow.set(1);
+      animate(kickX, ux * 6, { type: "spring", stiffness: 520, damping: 20 });
+      animate(kickY, uy * 6, { type: "spring", stiffness: 520, damping: 20 });
+      animate(shotLen, 1, { duration: flight, ease: [0.15, 0.7, 0.35, 1] });
+      animate(shotArc, g.dist * 0.02, { duration: flight, ease: [0.5, 0, 0.9, 0.6] });
+      await later(flight * 1000);
+      if (!alive) return true;
+
+      // 3. Impact: the glob splats open onto the letters, overshooting as
+      // it spreads, the strand snaps taut, and the name takes the knock.
+      tipShow.set(0);
+      animate(shotArc, 0, { duration: 0.12, ease: "easeOut" });
+      animate(netPop, 1, { type: "spring", stiffness: 560, damping: 14, mass: 0.6 });
+      knockName(ux, uy);
+      settleKick();
+
+      // 4. Holds, taut — unless something takes the spider off its line.
+      for (let i = 0; i < 7 && !interrupted(); i += 1) await later(100);
+      if (!alive) return true;
+
+      // 5. Lets go: the strand goes slack, sagging, and is reeled in.
+      animate(shotArc, -g.dist * 0.09, { duration: 0.4, ease: [0.2, 0.6, 0.4, 1] });
+      animate(shotLen, 0, { duration: 0.46, ease: [0.55, 0, 0.8, 0.3] });
+      await later(160);
+      if (!alive) return true;
+
+      // 6 and 7. With nothing holding it, the web slides down the letters
+      // and falls away — one continuous timeline; see dropY.
+      animate(dropT, 1, { duration: DROP_MS / 1000, ease: "linear" });
+      await later(DROP_MS + 40);
+      if (!alive) return true;
+
+      finish();
+      return true;
+    };
+
+    // Start to start, every THROW_EVERY; if the moment isn't right (in the
+    // nest, scrolled away, name off screen) it looks again shortly rather
+    // than waiting out a whole cycle.
+    const scheduleThrow = (ms) => {
+      throwTimer = setTimeout(async () => {
+        const started = Date.now();
+        const went = await throwWeb();
+        if (!alive) return;
+        scheduleThrow(went ? Math.max(1000, THROW_EVERY - (Date.now() - started)) : THROW_RETRY);
+      }, ms);
+    };
+    // After the entrance has lowered it out of the web and it has settled.
+    scheduleThrow(5600);
+
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
 
@@ -714,6 +1068,9 @@ export default function HeroSpider() {
       clearTimeout(visitTimer);
       clearTimeout(leaveTimer);
       clearTimeout(tapTimer);
+      clearTimeout(throwTimer);
+      pending.forEach(clearTimeout);
+      pending.clear();
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pointerdown", onPointerDown);
     };
@@ -776,7 +1133,49 @@ export default function HeroSpider() {
     // widens the document: on phones it pushed the navbar's toggle and
     // menu button off-screen. body's overflow-x: hidden doesn't stop it
     // (iOS Safari ignores it outright), so the rig clips itself.
-    <div className="hero-spider-stage" aria-hidden="true">
+    <div className="hero-spider-stage" aria-hidden="true" ref={stageRef}>
+    {shot && (
+      <>
+        {/* The thrown strand. A 1px SVG that paints outside its box, drawn
+            straight in stage coordinates — no page-sized canvas. The halo
+            underneath keeps it legible over the name's letters, whichever
+            theme is on. */}
+        <svg className="hero-spider__shot" width="1" height="1">
+          <motion.path className="hero-spider__shot-halo" d={shotD} style={{ pathLength: shotLen, opacity: shotShow }} />
+          <motion.path className="hero-spider__shot-line" d={shotD} style={{ pathLength: shotLen, opacity: shotShow }} />
+          <motion.circle className="hero-spider__shot-tip" cx={tipX} cy={tipY} r="2.4" style={{ opacity: tipShow }} />
+        </svg>
+
+        {/* The splat, pinned where the strand hit. */}
+        <motion.div
+          key={shot.id}
+          className="hero-spider__net"
+          style={{
+            left: shot.tx,
+            top: shot.ty,
+            x: netX,
+            y: netY,
+            rotate: netRot,
+            scaleX: netScaleX,
+            scaleY: netScaleY,
+            opacity: netFade,
+          }}
+        >
+          <svg viewBox="-36 -36 72 72" style={{ transform: `rotate(${shot.angle}deg) scaleX(1.18)` }}>
+            {[shot.splat.spokes, ...shot.splat.rings].map((d, i) => (
+              <path key={`h${i}`} className="hero-spider__net-halo" d={d} />
+            ))}
+            {[shot.splat.spokes, ...shot.splat.rings].map((d, i) => (
+              <path key={`s${i}`} className={`hero-spider__net-silk${i ? " is-ring" : ""}`} d={d} />
+            ))}
+            {shot.splat.beads.map(([x, y], i) => (
+              <circle key={`b${i}`} className="hero-spider__net-bead" cx={x} cy={y} r="1.3" />
+            ))}
+            <circle className="hero-spider__net-glob" r="2.6" />
+          </svg>
+        </motion.div>
+      </>
+    )}
     <div
       className={`hero-spider hero-spider--${layoutName}${touch ? " hero-spider--touch" : ""}`}
       ref={hubRef}

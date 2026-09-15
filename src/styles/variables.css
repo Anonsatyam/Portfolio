@@ -36,6 +36,10 @@
 
   --color-loader-base: #2e2e2e;
 
+  /* The scroll dial's neon: full strength suits black, reads as a
+     smudge on white, so light turns it down. */
+  --dial-glow: var(--color-accent);
+
   --shadow-card-hover: 0 24px 50px -24px rgba(0, 0, 0, 0.9);
   --shadow-badge: 0 18px 40px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
   --shadow-slot: inset 0 2px 3px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -141,6 +145,7 @@
   --color-glass-strong: rgba(255, 255, 255, 0.94);
 
   --color-loader-base: #dfe1e6;
+  --dial-glow: color-mix(in srgb, var(--color-accent) 35%, transparent);
 
   /* Atlassian elevation: soft navy-tinted shadows, never black. */
   --shadow-sm: 0 1px 1px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);

@@ -16,6 +16,79 @@
   overflow: clip;
 }
 
+/* ---- the web throw ---- */
+
+.hero-spider__shot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  overflow: visible;
+}
+
+.hero-spider__shot path,
+.hero-spider__net path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A thin rim in the page colour under every strand: silk is pale on
+   dark and slate on light, and the name it lands on is the opposite of
+   each, so without this it would vanish exactly where it hits. */
+.hero-spider__shot-halo,
+.hero-spider__net-halo {
+  stroke: var(--color-bg);
+  /* stroke-opacity, not opacity: the strand's opacity is driven inline. */
+  stroke-opacity: 0.7;
+}
+
+.hero-spider__shot-halo {
+  stroke-width: 3.4;
+}
+
+.hero-spider__shot-line {
+  stroke: var(--spider-silk-top);
+  stroke-width: 1.3;
+}
+
+.hero-spider__shot-tip,
+.hero-spider__net-glob,
+.hero-spider__net-bead {
+  fill: var(--spider-silk-top);
+}
+
+.hero-spider__net {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  /* Pivots a little above centre, where it clings longest. */
+  transform-origin: 50% 40%;
+  will-change: transform, opacity;
+}
+
+.hero-spider__net svg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  overflow: visible;
+}
+
+.hero-spider__net-halo {
+  stroke-width: 3;
+}
+
+.hero-spider__net-silk {
+  stroke: var(--spider-silk-top);
+  stroke-width: 1.15;
+}
+
+.hero-spider__net-silk.is-ring {
+  stroke-width: 0.9;
+  opacity: 0.85;
+}
+
 .hero-spider {
   position: absolute;
   /* Far enough down that the hub itself is visible — at the very top the
