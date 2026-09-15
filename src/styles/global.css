@@ -48,6 +48,13 @@ input, textarea {
   font-size: var(--fs-base);
 }
 
+/* The spider rig hangs from the hero corner all the way down the page,
+   so it is positioned against the whole document rather than the hero
+   (which clips its own overflow to contain the background blobs). */
+main {
+  position: relative;
+}
+
 .container {
   width: 100%;
   max-width: var(--max-width);

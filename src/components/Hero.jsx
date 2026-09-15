@@ -6,6 +6,7 @@ import { prefersReducedMotion } from "../lib/motion";
 import { getMailto } from "../lib/email";
 import BlurReveal from "./BlurReveal";
 import MaskReveal from "./MaskReveal";
+import HeroSpider from "./HeroSpider";
 import HangingIDCard from "./HangingIDCard";
 import MagneticButton from "./MagneticButton";
 import "./Hero.css";
@@ -61,6 +62,7 @@ export default function Hero() {
   }, []);
 
   return (
+    <>
     <section id="hero" className="hero" ref={sectionRef}>
       <div className="hero__bg" aria-hidden="true">
         <div className="hero__grid" />
@@ -148,5 +150,11 @@ export default function Hero() {
         </button>
       </div>
     </section>
+
+    {/* Outside the section on purpose: .hero sets overflow:hidden to
+        contain its background blobs, which was clipping the spider the
+        moment it descended past the hero's bottom edge. */}
+    <HeroSpider />
+    </>
   );
 }
