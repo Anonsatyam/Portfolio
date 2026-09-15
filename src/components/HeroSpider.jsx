@@ -179,8 +179,11 @@ const LEGS = [false, true].flatMap((flip) =>
   }))
 );
 
-// The spider needs a gutter beside the container to hang in. Below this
-// there isn't one, and it would swing over the copy.
+// The whole thing needs a gutter beside the container to live in. Below
+// this there isn't one: the spider would swing over the copy, and the
+// web spans about two thirds of a 390px screen, laying silk across the
+// badge, the eyebrow and the top of the name. So below this width none
+// of it is rendered at all.
 const RIG_QUERY = "(min-width: 1400px)";
 
 export default function HeroSpider() {
@@ -190,10 +193,10 @@ export default function HeroSpider() {
   const spanRef = useRef(span);
   spanRef.current = span;
 
-  // Whether the spider itself is in play. Hiding it in CSS was not
-  // enough: every spring, timer and observer went on running, writing
-  // ~60 style updates a second to an element nobody could see. Gating
-  // the mount stops the work rather than the paint.
+  // Whether any of this is in play. Hiding it in CSS was not enough:
+  // every spring, timer and observer went on running, writing ~60 style
+  // updates a second to an element nobody could see. Gating the mount
+  // stops the work rather than just the paint.
   const [rigOn, setRigOn] = useState(
     () => typeof window !== "undefined" && window.matchMedia(RIG_QUERY).matches
   );
@@ -594,6 +597,10 @@ export default function HeroSpider() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // After every hook, so the hook order never changes when the viewport
+  // crosses the breakpoint.
+  if (!rigOn) return null;
+
   return (
     <div className="hero-spider" aria-hidden="true" ref={hubRef}>
       {/* The nest. Its hub is this element's origin, so the dragline
@@ -681,7 +688,6 @@ export default function HeroSpider() {
         />
       </svg>
 
-      {rigOn && (
       <div className="hero-spider__rig">
         {/* One dragline, pivoting at the hub. */}
         <motion.span
@@ -760,7 +766,6 @@ export default function HeroSpider() {
           </svg>
         </motion.div>
       </div>
-      )}
     </div>
   );
 }

@@ -248,16 +248,7 @@
   }
 }
 
-/* Below this the container has no gutter left of it, so the spider
-   would swing over the copy. It is not rendered at all below the same
-   breakpoint — see RIG_QUERY — because hiding it in CSS left every
-   spring and timer running against an element nobody could see.
-   The web stays behind as faint corner texture. */
-@media (max-width: 1399px) {
-  /* Scaled rather than resized: the box size comes from an inline style,
-     and scaling about the centre keeps the hub on the same point. */
-  .hero-spider__web {
-    transform: scale(0.72);
-    opacity: 0.4;
-  }
-}
+/* No breakpoint rules here on purpose. Below 1400px the component
+   renders nothing at all — see RIG_QUERY in HeroSpider.jsx — because
+   hiding it in CSS left every spring, timer and observer running
+   against elements nobody could see. */
