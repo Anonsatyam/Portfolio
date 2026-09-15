@@ -256,9 +256,12 @@
   }
 }
 
+/* Below this the hero stacks to one column, so the badge has the full
+   width to itself — it was still sized for the narrow right-hand column,
+   which squeezed the quote into a thin ribbon of text. */
 @media (max-width: 900px) {
   .id-card__wrap {
-    --card-w: clamp(165px, 34vw, 210px);
+    --card-w: clamp(240px, 64vw, 300px);
     min-height: 220px;
   }
 }
