@@ -46,7 +46,7 @@
 }
 
 .loader__word-base {
-  color: #2e2e2e;
+  color: var(--color-loader-base);
 }
 
 .loader__word-fill {

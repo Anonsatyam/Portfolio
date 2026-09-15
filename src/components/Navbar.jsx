@@ -4,6 +4,7 @@ import { FiMenu, FiX } from "react-icons/fi";
 import { navLinks, personal } from "../data/content";
 import useActiveSection from "../hooks/useActiveSection";
 import { scrollToId } from "../lib/smoothScroll";
+import ThemeToggle from "./ThemeToggle";
 import "./Navbar.css";
 
 export default function Navbar() {
@@ -64,21 +65,27 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <a
-          href={personal.resumeUrl}
-          download
-          className="btn btn-primary navbar__cta"
-        >
-          Resume
-        </a>
+        {/* The toggle stays in the bar at every width rather than hiding
+            in the mobile menu, so switching never takes two taps. */}
+        <div className="navbar__actions">
+          <ThemeToggle />
 
-        <button
-          className="navbar__burger"
-          aria-label={open ? "Close menu" : "Open menu"}
-          onClick={() => setOpen((o) => !o)}
-        >
-          {open ? <FiX size={24} /> : <FiMenu size={24} />}
-        </button>
+          <a
+            href={personal.resumeUrl}
+            download
+            className="btn btn-primary navbar__cta"
+          >
+            Resume
+          </a>
+
+          <button
+            className="navbar__burger"
+            aria-label={open ? "Close menu" : "Open menu"}
+            onClick={() => setOpen((o) => !o)}
+          >
+            {open ? <FiX size={24} /> : <FiMenu size={24} />}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

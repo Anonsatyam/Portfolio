@@ -14,7 +14,7 @@
 }
 
 .card:hover .icon-tile {
-  color: #ffffff;
+  color: var(--color-on-accent);
   background: var(--color-accent);
   border-color: var(--color-accent);
   transform: translateY(-2px);

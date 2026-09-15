@@ -5,6 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#000000" />
+    <!-- Applies the saved theme before anything paints. Doing this from
+         React would flash the default theme for a frame on every load. -->
+    <script>
+      (function () {
+        var theme = "dark";
+        try {
+          if (localStorage.getItem("theme") === "light") theme = "light";
+        } catch (e) {}
+        document.documentElement.setAttribute("data-theme", theme);
+        if (theme === "light") {
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#ffffff");
+        }
+      })();
+    </script>
     <meta name="description" content="Satyam Kumar — Full Stack React & Java Developer. Portfolio showcasing experience, projects, and skills." />
     <link rel="canonical" href="https://portfolio-orcin-eta-20.vercel.app/" />
     <title>Satyam Kumar | Full Stack Developer</title>

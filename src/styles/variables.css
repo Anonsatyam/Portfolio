@@ -1,3 +1,13 @@
+/*
+ * Two themes, one set of names. Dark is the default and lives on bare
+ * :root; light overrides only the values, on [data-theme="light"], which
+ * an inline script in index.html sets before first paint so there is
+ * never a flash of the wrong theme.
+ *
+ * Components must never hardcode a colour that changes between themes.
+ * Brand colours (LinkedIn, Gmail, Instagram) and alpha-only mask
+ * gradients are the only literals allowed outside this file.
+ */
 :root {
   /* Colors — full dark theme: black surfaces, white/grey text, red accent */
   color-scheme: dark;
@@ -14,6 +24,47 @@
   --color-accent-soft: #2b0d0d;
   --color-accent-dark: #ff6b6b;
   --color-ink: #ffffff;
+  /* Text sitting on a filled accent surface — buttons, the logo mark. */
+  --color-on-accent: #ffffff;
+
+  --color-success: #22c55e;
+  --color-success-text: #4ade80;
+
+  /* Translucent chrome over the page: the navbar and the scroll dial. */
+  --color-glass: rgba(0, 0, 0, 0.7);
+  --color-glass-strong: rgba(0, 0, 0, 0.92);
+
+  --color-loader-base: #2e2e2e;
+
+  --shadow-card-hover: 0 24px 50px -24px rgba(0, 0, 0, 0.9);
+  --shadow-badge: 0 18px 40px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  --shadow-slot: inset 0 2px 3px rgba(0, 0, 0, 0.95), 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-pin: 0 1px 3px rgba(0, 0, 0, 0.6);
+
+  /* The spider. Dark red body lit from the top left; silver silk. */
+  --spider-abdomen-hi: #b02330;
+  --spider-abdomen-mid: #7a121c;
+  --spider-abdomen-lo: #420810;
+  --spider-abdomen-edge: #1e0306;
+  --spider-thorax-hi: #a11f2a;
+  --spider-thorax-mid: #5e0e16;
+  --spider-thorax-lo: #24040a;
+  --spider-leg-hi: #8d1823;
+  --spider-leg-mid: #4a0a11;
+  --spider-leg-lo: #1b0205;
+  --spider-leg-far: #160204;
+  --spider-outline: #120204;
+  --spider-sheen: #c2404c;
+  --spider-mark: #e84250;
+  --spider-eye: #f3c9cd;
+  --spider-glow: rgba(176, 35, 48, 0.28);
+  --spider-shadow: rgba(0, 0, 0, 0.85);
+  --spider-silk-top: rgba(236, 240, 246, 0.95);
+  --spider-silk-mid: rgba(214, 219, 228, 0.7);
+  --spider-silk-end: rgba(198, 203, 212, 0.55);
+  --spider-silk-glow: rgba(255, 255, 255, 0.28);
+  --spider-mend: #e8eaf0;
+  --spider-web: color-mix(in srgb, var(--color-accent) 50%, var(--color-text-soft));
 
   /* Semantic design-token aliases (premium-brief naming), mapped onto
      the tokens above — new components should prefer these names. */
@@ -59,4 +110,71 @@
 
   --transition-fast: 0.18s ease;
   --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+ * Light theme: white and cool grey surfaces with Atlassian blue, taken
+ * from the Atlassian Design System neutrals and brand blue (B400) so the
+ * whole set holds together rather than being picked by eye.
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-bg-alt: #f4f5f7; /* N20 */
+  --color-surface: #ffffff;
+  --color-text: #172b4d; /* N800 */
+  --color-text-muted: #42526e; /* N500 — 7.5:1 on white */
+  --color-text-soft: #626f86; /* 4.9:1 on white, 4.5:1 on N20 */
+  --color-border: #dfe1e6; /* N40 */
+  --color-border-strong: #c1c7d0; /* N70 */
+  --color-accent: #0052cc; /* B400 */
+  --color-accent-hover: #0065ff; /* B300 */
+  --color-accent-soft: #deebff; /* B50 */
+  --color-accent-dark: #0747a6; /* B500 — accent as text */
+  --color-ink: #091e42; /* N900 */
+  --color-on-accent: #ffffff;
+
+  --color-success: #00875a; /* G400 */
+  --color-success-text: #006644; /* G500 — the light green failed contrast on white */
+
+  --color-glass: rgba(255, 255, 255, 0.72);
+  --color-glass-strong: rgba(255, 255, 255, 0.94);
+
+  --color-loader-base: #dfe1e6;
+
+  /* Atlassian elevation: soft navy-tinted shadows, never black. */
+  --shadow-sm: 0 1px 1px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-md: 0 4px 8px -2px rgba(9, 30, 66, 0.25), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-lg: 0 8px 12px rgba(9, 30, 66, 0.15), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-card-hover: 0 20px 36px -18px rgba(9, 30, 66, 0.35), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-badge: 0 18px 36px -14px rgba(9, 30, 66, 0.3), 0 0 1px rgba(9, 30, 66, 0.31);
+  --shadow-slot: inset 0 2px 3px rgba(9, 30, 66, 0.28), 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-pin: 0 1px 3px rgba(9, 30, 66, 0.3);
+
+  /* The spider in navy, lit the same way, with blue detailing — so it
+     belongs to this palette rather than being a red visitor on it. */
+  --spider-abdomen-hi: #4c6b9e;
+  --spider-abdomen-mid: #253858; /* N700 */
+  --spider-abdomen-lo: #172b4d; /* N800 */
+  --spider-abdomen-edge: #091e42;
+  --spider-thorax-hi: #42526e;
+  --spider-thorax-mid: #253858;
+  --spider-thorax-lo: #091e42;
+  --spider-leg-hi: #42526e;
+  --spider-leg-mid: #253858;
+  --spider-leg-lo: #091e42;
+  --spider-leg-far: #5e6c84;
+  --spider-outline: #091e42;
+  --spider-sheen: #7a869a;
+  --spider-mark: #4c9aff; /* B200 */
+  --spider-eye: #deebff;
+  --spider-glow: rgba(0, 82, 204, 0.18);
+  --spider-shadow: rgba(9, 30, 66, 0.35);
+  /* Silver silk vanishes on white; slate grey reads as silk here. */
+  --spider-silk-top: rgba(66, 82, 110, 0.75);
+  --spider-silk-mid: rgba(94, 108, 132, 0.55);
+  --spider-silk-end: rgba(107, 119, 140, 0.45);
+  --spider-silk-glow: rgba(255, 255, 255, 0);
+  --spider-mend: #0065ff;
+  --spider-web: color-mix(in srgb, var(--color-accent) 42%, #97a0af);
 }

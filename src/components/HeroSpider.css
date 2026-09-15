@@ -4,6 +4,18 @@
    overflow to contain the background blobs, which cut the dragline off
    at the hero's bottom edge. It is positioned against <main> instead,
    so the spider can descend the full page. */
+/* Page-sized, and clips anything that runs off the sides — see the
+   comment on this element in the JSX. `clip` rather than `hidden` where
+   supported: it clips without becoming a scroll container. */
+.hero-spider-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+  overflow: clip;
+}
+
 .hero-spider {
   position: absolute;
   /* Far enough down that the hub itself is visible — at the very top the
@@ -17,6 +29,20 @@
      behind one; still under the navbar (100) and the cursor. */
   z-index: 5;
   pointer-events: none;
+  --spider-size: 52px;
+}
+
+/* Below the wide breakpoint the web moves to the top-right corner, the
+   one corner that is clear of the copy on every layout down to a phone,
+   and everything shrinks to fit the margin. See LAYOUTS in the JSX. */
+.hero-spider--compact {
+  left: auto;
+  right: clamp(12px, 2.2vw, 24px);
+  --spider-size: 30px;
+}
+
+.hero-spider--compact .hero-spider__web {
+  opacity: 0.5;
 }
 
 /* Box size and the negative margin that centres the hub on this
@@ -33,7 +59,7 @@
 .hero-spider__web path,
 .hero-spider__web line {
   fill: none;
-  stroke: color-mix(in srgb, var(--color-accent) 50%, var(--color-text-soft));
+  stroke: var(--spider-web);
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
@@ -72,12 +98,12 @@
 /* Fresh silk: brighter than the web it is joining, and it fades to
    nothing rather than staying as a permanent bright streak. */
 .hero-spider__mend {
-  stroke: #e8eaf0;
+  stroke: var(--spider-mend);
   stroke-width: 1.4;
 }
 
 /* The dragline. One hair of silk, pivoting at the hub; its length comes
-   from scaleY and its height is measured to the footer in JS. */
+   from scaleY over a fixed-height element (THREAD_PX in the JSX). */
 .hero-spider__thread {
   position: absolute;
   top: 0;
@@ -86,11 +112,11 @@
   margin-left: -0.5px;
   background: linear-gradient(
     180deg,
-    rgba(236, 240, 246, 0.95),
-    rgba(214, 219, 228, 0.7) 40%,
-    rgba(198, 203, 212, 0.55)
+    var(--spider-silk-top),
+    var(--spider-silk-mid) 40%,
+    var(--spider-silk-end)
   );
-  box-shadow: 0 0 3px rgba(255, 255, 255, 0.28);
+  box-shadow: 0 0 3px var(--spider-silk-glow);
   transform-origin: top center;
   transform: scaleY(0);
 }
@@ -99,10 +125,11 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 52px;
-  margin-left: -26px;
-  /* Closes the gap between the end of the silk and the spinnerets. */
-  margin-top: -7px;
+  width: var(--spider-size);
+  margin-left: calc(var(--spider-size) / -2);
+  /* Closes the gap between the end of the silk and the spinnerets —
+     proportional, so it holds at every spider size. */
+  margin-top: calc(var(--spider-size) * -0.135);
   transform-origin: 50% 0;
   will-change: transform;
 }
@@ -111,8 +138,20 @@
   width: 100%;
   height: auto;
   overflow: visible;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.85))
-    drop-shadow(0 0 10px rgba(176, 35, 48, 0.28));
+  filter: drop-shadow(0 8px 16px var(--spider-shadow)) drop-shadow(0 0 10px var(--spider-glow));
+}
+
+/* Touch devices: one cheap shadow instead of two blurred ones, and no
+   idle leg twitch. A filter re-rasterises whenever the legs inside it
+   move, and the twitch meant that happened on every frame, forever. The
+   stride still runs whenever the spider actually walks. */
+.hero-spider--touch .hero-spider__svg {
+  filter: drop-shadow(0 3px 5px var(--spider-shadow));
+}
+
+.hero-spider--touch .hero-spider__legs path.is-a,
+.hero-spider--touch .hero-spider__legs path.is-b {
+  animation: none;
 }
 
 /* Three passes over the same eight paths build the round, jointed look:
@@ -131,7 +170,7 @@
 }
 
 .hero-spider__legs--far path {
-  stroke: #160204;
+  stroke: var(--spider-leg-far);
   stroke-width: 4.6;
   opacity: 0.85;
 }
@@ -146,7 +185,7 @@
 }
 
 .hero-spider__legs--sheen path {
-  stroke: #c2404c;
+  stroke: var(--spider-sheen);
   stroke-width: 1.1;
   opacity: 0.45;
 }
@@ -207,13 +246,13 @@
 
 .hero-spider__abdomen {
   fill: url(#sp-abdomen);
-  stroke: #120204;
+  stroke: var(--spider-outline);
   stroke-width: 1;
 }
 
 .hero-spider__thorax {
   fill: url(#sp-thorax);
-  stroke: #120204;
+  stroke: var(--spider-outline);
   stroke-width: 1;
 }
 
@@ -223,12 +262,12 @@
 }
 
 .hero-spider__mark {
-  fill: #e84250;
+  fill: var(--spider-mark);
   opacity: 0.55;
 }
 
 .hero-spider__eye {
-  fill: #f3c9cd;
+  fill: var(--spider-eye);
   opacity: 0.9;
 }
 
@@ -244,7 +283,3 @@
   }
 }
 
-/* No breakpoint rules here on purpose. Below 1400px the component
-   renders nothing at all — see RIG_QUERY in HeroSpider.jsx — because
-   hiding it in CSS left every spring, timer and observer running
-   against elements nobody could see. */

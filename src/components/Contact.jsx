@@ -26,8 +26,10 @@ const links = [
     label: "GitHub",
     value: "Anonsatyam",
     href: personal.github,
-    brand: "#ffffff",
-    contrast: "#000000",
+    // Monochrome mark: follows the theme's ink instead of fixed white,
+    // which vanished against the light theme's white cards.
+    brand: "var(--color-ink)",
+    contrast: "var(--color-bg)",
   },
 ];
 
@@ -65,7 +67,7 @@ export default function Contact() {
               target={link.href.startsWith("http") ? "_blank" : undefined}
               rel="noreferrer"
               onMouseMove={trackPointer}
-              style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "#ffffff" }}
+              style={{ "--brand": link.brand, "--brand-contrast": link.contrast || "var(--color-on-accent)" }}
             >
               <span className="contact__glow" aria-hidden="true" />
               <span className="contact__arrow" aria-hidden="true">

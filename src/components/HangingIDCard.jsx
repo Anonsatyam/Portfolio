@@ -130,6 +130,12 @@ export default function HangingIDCard() {
     releaseY.current?.stop();
     dragging.current = true;
     origin.current = { x: e.clientX - dragX.get(), y: e.clientY - dragY.get() };
+    // Belt and braces with user-select in the CSS: some engines still
+    // extend a selection from a press that started on text. Only reached
+    // for a real drag — links and touch returned above — so taps, clicks
+    // and page scrolling behave exactly as before.
+    e.preventDefault();
+    window.getSelection?.()?.removeAllRanges();
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
@@ -213,7 +219,7 @@ export default function HangingIDCard() {
                 <div className="id-card__slot" aria-hidden="true" />
                 <span className="id-card__badge-label">Access Badge</span>
                 <div className="id-card__avatar">
-                  <img src="/avatar.jpg" alt="" />
+                  <img src="/avatar.jpg" alt="" draggable={false} />
                 </div>
                 <h3 className="id-card__name">{personal.name}</h3>
                 {personal.location && (

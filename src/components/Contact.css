@@ -72,7 +72,7 @@
 
 .contact__card:hover .contact__icon {
   background: var(--brand, var(--color-accent));
-  color: var(--brand-contrast, #fff);
+  color: var(--brand-contrast, var(--color-on-accent));
   transform: translateY(-4px) scale(1.06);
   box-shadow: 0 12px 28px -10px color-mix(in srgb, var(--brand, var(--color-accent)) 80%, transparent);
 }

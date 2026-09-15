@@ -129,16 +129,36 @@ const FRAME_D = framePath();
  * The spider
  * ------------------------------------------------------------------ */
 const HUB_DROP = 2; // sitting in the middle of the web
-const REST_DROP = 150; // hanging, before any scrolling
 const FOOTER_GAP = 64; // stops just short of the footer
 const NEAR = 190; // how close the pointer gets before it bolts
 // Measured from the hub, and wider than NEAR: once it is up in the web
 // the cursor has to properly leave before it will come back down.
 const LEAVE = 300;
-const MAX_SWAY = 16; // px the spider drifts either side of the hub
-// How far out into the web it will patrol. Capped well inside the
-// frame so it never walks over the hero copy.
+// How far out into the web it will patrol, in web units. Capped well
+// inside the frame so it never walks over the hero copy.
 const NEST_R = 74;
+// Tap targets are fingers, not a cursor tip, and the spider is small.
+const TOUCH_NEAR = 80;
+// A fixed-height silk element stretched by scaleY. Sizing it to the
+// whole page (6000-9000px) made a single texture taller than many
+// mobile GPUs will allocate in one piece.
+const THREAD_PX = 1024;
+
+/**
+ * Two layouts, switched at one breakpoint.
+ *
+ * Wide screens have a gutter left of the container, so the web sits in
+ * the top-left corner at full size. Below that there is no gutter on
+ * the left — the copy starts at the edge — but the top-right corner is
+ * clear on every layout down to a phone, so the web moves there,
+ * mirrored so its mooring lines still run off the nearest edges, and
+ * shrinks to fit the margin.
+ */
+const WIDE_QUERY = "(min-width: 1400px)";
+const LAYOUTS = {
+  wide: { scale: 1, mirror: 1, rest: 150, sway: 16, flee: 120 },
+  compact: { scale: 0.45, mirror: -1, rest: 112, sway: 9, flee: 90 },
+};
 
 /**
  * Drawn hanging the way a spider actually hangs: abdomen uppermost,
@@ -179,36 +199,33 @@ const LEGS = [false, true].flatMap((flip) =>
   }))
 );
 
-// The whole thing needs a gutter beside the container to live in. Below
-// this there isn't one: the spider would swing over the copy, and the
-// web spans about two thirds of a 390px screen, laying silk across the
-// badge, the eyebrow and the top of the name. So below this width none
-// of it is rendered at all.
-const RIG_QUERY = "(min-width: 1400px)";
-
 export default function HeroSpider() {
   const hubRef = useRef(null);
   const bodyRef = useRef(null);
-  const [span, setSpan] = useState(1200); // hub → footer, measured
-  const spanRef = useRef(span);
-  spanRef.current = span;
+  const spanRef = useRef(1200); // hub → footer, measured
 
-  // Whether any of this is in play. Hiding it in CSS was not enough:
-  // every spring, timer and observer went on running, writing ~60 style
-  // updates a second to an element nobody could see. Gating the mount
-  // stops the work rather than just the paint.
-  const [rigOn, setRigOn] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(RIG_QUERY).matches
+  // Which layout is in play. Rendered from state, but read through a ref
+  // inside the long-lived effects so a resize doesn't restart the whole
+  // behaviour loop.
+  const [layoutName, setLayoutName] = useState(() =>
+    window.matchMedia(WIDE_QUERY).matches ? "wide" : "compact"
   );
+  const layout = LAYOUTS[layoutName];
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   useEffect(() => {
-    const mq = window.matchMedia(RIG_QUERY);
-    const sync = () => setRigOn(mq.matches);
+    const mq = window.matchMedia(WIDE_QUERY);
+    const sync = () => setLayoutName(mq.matches ? "wide" : "compact");
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
 
+  // Touch devices get the same spider with the always-on idle motion
+  // turned down, to spare battery on the devices least able to afford it.
+  const [touch] = useState(() => !window.matchMedia("(pointer: fine)").matches);
+
   // How far it has lowered itself, in px below the hub.
-  const rawDrop = useMotionValue(REST_DROP);
+  const rawDrop = useMotionValue(layout.rest);
   const drop = useSpring(rawDrop, { stiffness: 80, damping: 20, mass: 0.6 });
 
   // 0 = hanging where the scroll says, 1 = tucked in the middle of the web.
@@ -217,8 +234,8 @@ export default function HeroSpider() {
 
   const { scrollYProgress } = useScroll();
   const applyScroll = (v) => {
-    if (!rigOn) return;
-    const target = REST_DROP + (spanRef.current - REST_DROP) * v;
+    const rest = layoutRef.current.rest;
+    const target = rest + (spanRef.current - rest) * v;
     rawDrop.set(target + (HUB_DROP - target) * retreat.get());
   };
   useMotionValueEvent(scrollYProgress, "change", applyScroll);
@@ -227,16 +244,13 @@ export default function HeroSpider() {
   // Measure the run from the hub down to the footer so the spider can
   // descend the whole page and stop on top of it.
   useEffect(() => {
-    if (!rigOn) return undefined;
     const measure = () => {
       const hub = hubRef.current;
       const footer = document.querySelector("footer");
       if (!hub || !footer) return;
       const hubY = hub.getBoundingClientRect().top + window.scrollY;
       const footY = footer.getBoundingClientRect().top + window.scrollY;
-      const next = Math.max(420, Math.round(footY - hubY - FOOTER_GAP));
-      spanRef.current = next;
-      setSpan(next);
+      spanRef.current = Math.max(420, Math.round(footY - hubY - FOOTER_GAP));
       applyScroll(scrollYProgress.get());
     };
     measure();
@@ -251,7 +265,7 @@ export default function HeroSpider() {
       window.removeEventListener("resize", measure);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rigOn]);
+  }, []);
 
   // One source of truth for the pendulum: the spider's offset from
   // directly below the hub. The dragline's length and angle are both
@@ -260,10 +274,10 @@ export default function HeroSpider() {
   // top of the page and fling the spider a thousand pixels sideways by
   // the bottom, where the thread is 6000px long.)
   const pointerX = useMotionValue(0);
-  const swayRaw = useSpring(useTransform(pointerX, [-320, 320], [-MAX_SWAY, MAX_SWAY]), {
-    stiffness: 90,
-    damping: 18,
-  });
+  const swayRaw = useSpring(
+    useTransform(pointerX, (v) => (Math.max(-320, Math.min(320, v)) / 320) * layoutRef.current.sway),
+    { stiffness: 90, damping: 18 }
+  );
   // Sway has to die out as the spider climbs home: a 16px offset on a
   // 2px-long thread is an 83° angle, which threw the dragline sideways
   // across the page the moment the pointer came near.
@@ -276,6 +290,10 @@ export default function HeroSpider() {
   // Kept separate from the bob so the two never cancel each other: this
   // is the occasional reel-up-and-drop while it is just hanging there.
   const hitch = useMotionValue(0);
+  // Climbing a short way up its own line out of reach, used instead of
+  // going home when the nest is far off-screen. Also separate, so none
+  // of these three ever cancel another.
+  const flee = useMotionValue(0);
   // A strand it is repairing, replayed by changing the key.
   const [mend, setMend] = useState(null);
   const mendId = useRef(0);
@@ -291,14 +309,11 @@ export default function HeroSpider() {
     ([sway, ix, r]) => sway * (1 - r) + ix * r
   );
   const offsetY = useTransform(
-    [drop, idleY, bob, hitch, retreatSpring],
-    ([d, iy, b, h, r]) => d + iy * r + (b + h) * (1 - r)
+    [drop, idleY, bob, hitch, flee, retreatSpring],
+    ([d, iy, b, h, f, r]) => d + iy * r + (b + h + f) * (1 - r)
   );
 
-  const threadScale = useTransform(
-    [offsetX, offsetY],
-    ([x, y]) => Math.hypot(x, y) / Math.max(1, spanRef.current)
-  );
+  const threadScale = useTransform([offsetX, offsetY], ([x, y]) => Math.hypot(x, y) / THREAD_PX);
   // Measured from straight down, which is where the unrotated element
   // already points. Negated because CSS rotate() runs clockwise, so a
   // positive angle swings the tip of a downward line to the left —
@@ -356,7 +371,6 @@ export default function HeroSpider() {
   const walkStop = useRef(null);
   const stride = useRef(0);
   const onPace = () => {
-    if (!rigOn) return;
     const vx = offsetX.getVelocity();
     const vy = offsetY.getVelocity();
     const speed = Math.hypot(vx, vy);
@@ -403,7 +417,6 @@ export default function HeroSpider() {
   useEffect(() => () => clearTimeout(walkStop.current), []);
 
   useEffect(() => {
-    if (!rigOn) return undefined;
     if (prefersReducedMotion()) {
       retreat.set(0);
       return undefined;
@@ -448,7 +461,15 @@ export default function HeroSpider() {
     const over = (ms) => wait(ms);
 
     const EASE_TURN = [0.33, 0, 0.2, 1];
-    const SPEED = 52; // px per second, unhurried
+
+    // Whether the hub is still on screen. Everything that sends the
+    // spider home is gated on this: once the reader has scrolled past
+    // the hero, the spider stays on its line beside them rather than
+    // hauling itself thousands of pixels back up the page out of sight.
+    const nestInView = (margin = -40) => {
+      const hub = hubRef.current;
+      return !!hub && hub.getBoundingClientRect().top > margin;
+    };
 
     /**
      * Crosses to a point in short darts rather than one long glide.
@@ -466,6 +487,9 @@ export default function HeroSpider() {
       const dist = Math.hypot(tx - sx, ty - sy);
       if (dist < 1) return;
       const darts = Math.max(2, Math.min(4, Math.round(dist / 24)));
+      // Unhurried, and relative to its own size: a small spider covering
+      // ground at a big spider's speed looks like it is being dragged.
+      const SPEED = 52 * Math.max(0.6, layoutRef.current.scale);
 
       // Start the turn a beat before the feet, so it sets off already
       // swinging round toward the destination rather than walking
@@ -513,12 +537,15 @@ export default function HeroSpider() {
 
         const spoke = Math.floor(Math.random() * SPOKES);
         const r = NEST_R * (0.55 + Math.random() * 0.45);
-        const [tx, ty] = point(ANGLES[spoke], r);
+        const [wx, wy] = point(ANGLES[spoke], r);
+        // Web units to screen pixels: scaled with the web, and mirrored
+        // along with it on compact layouts, so it still lands on a thread.
+        const L = layoutRef.current;
 
         // No turn phase: the body swings round during the slow first
         // dart, because its heading follows its velocity. Walking out
         // from the hub in a straight line is walking along a radial.
-        await walkTo(tx, ty);
+        await walkTo(wx * L.scale * L.mirror, wy * L.scale);
         if (!alive || bolted || Date.now() < spookedUntil) continue;
 
         // Then it works: a strand of capture spiral laid across the
@@ -554,11 +581,12 @@ export default function HeroSpider() {
     };
     reel();
 
-    const breathe = animate(bob, [0, -7, 0, 5, 0], {
-      duration: 7.5,
-      repeat: Infinity,
-      ease: "easeInOut",
-    });
+    // The only animation that never stops, so it is the one touch devices
+    // go without: it kept the whole transform pipeline running at 60fps
+    // for a 7px movement. Everything else there runs only when it moves.
+    const breathe = touch
+      ? { stop() {} }
+      : animate(bob, [0, -7, 0, 5, 0], { duration: 7.5, repeat: Infinity, ease: "easeInOut" });
 
     // What the pointer wants and what the spider does on its own are
     // two independent reasons to be in the nest; one flag each, and one
@@ -597,6 +625,12 @@ export default function HeroSpider() {
     let leaveTimer;
     const scheduleVisit = () => {
       visitTimer = setTimeout(() => {
+        // Only while the reader can actually see the nest. Further down
+        // the page it stays with them on its line.
+        if (!nestInView(60)) {
+          scheduleVisit();
+          return;
+        }
         visiting = true;
         settle();
         leaveTimer = setTimeout(() => {
@@ -612,6 +646,65 @@ export default function HeroSpider() {
     };
     scheduleVisit();
 
+    // ---- off-screen nest: stay with the reader -------------------------
+    let fleeing = false;
+    const setFleeing = (want) => {
+      if (want === fleeing) return;
+      fleeing = want;
+      // Up fast, back down slowly, like everything else it does.
+      animate(
+        flee,
+        want ? -layoutRef.current.flee : 0,
+        want
+          ? { type: "spring", stiffness: 240, damping: 22, mass: 0.6 }
+          : { type: "spring", stiffness: 50, damping: 14, mass: 1 }
+      );
+    };
+
+    // Scrolled away from the hero while it was up in the web: come back
+    // down the line to where the page says it should be hanging, rather
+    // than being left in a nest that has scrolled out of view.
+    const onScroll = () => {
+      if (inNest && !nestInView()) {
+        visiting = false;
+        bolted = false;
+        settle();
+      }
+    };
+
+    // Where the spider would be without the flee offset. Measuring from
+    // the displaced position is the hover feedback loop all over again:
+    // climbing away would carry it out of its own trigger radius.
+    const restCentre = () => {
+      const r = bodyRef.current.getBoundingClientRect();
+      return [r.left + r.width / 2, r.top + r.height / 2 - flee.get()];
+    };
+
+    // Taps. Passive, and a plain pointerdown that never prevents
+    // anything, so it cannot interfere with scrolling or any gesture —
+    // it only notices a finger landing near the spider.
+    let tapTimer;
+    const onPointerDown = (e) => {
+      if (e.pointerType === "mouse" || !bodyRef.current || inNest) return;
+      const [cx, cy] = restCentre();
+      if (Math.hypot(e.clientX - cx, e.clientY - cy) > TOUCH_NEAR) return;
+      clearTimeout(tapTimer);
+      if (nestInView()) {
+        bolted = true;
+        settle();
+        tapTimer = setTimeout(() => {
+          bolted = false;
+          settle();
+        }, 2400);
+      } else {
+        setFleeing(true);
+        tapTimer = setTimeout(() => setFleeing(false), 1800);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+
     const stop = () => {
       entrance.stop();
       breathe.stop();
@@ -620,6 +713,9 @@ export default function HeroSpider() {
       clearTimeout(hitchTimer);
       clearTimeout(visitTimer);
       clearTimeout(leaveTimer);
+      clearTimeout(tapTimer);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pointerdown", onPointerDown);
     };
 
     if (!window.matchMedia("(pointer: fine)").matches) return stop;
@@ -632,23 +728,33 @@ export default function HeroSpider() {
     // Approaching is measured against the spider. Whether to stay up is
     // measured against the hub, which does not move, over a wider area.
     const onMove = (e) => {
-      const el = bodyRef.current;
       const hubBox = hubRef.current?.getBoundingClientRect();
-      if (!el || !hubBox) return;
-      const r = el.getBoundingClientRect();
-      const dx = e.clientX - (r.left + r.width / 2);
-      const dy = e.clientY - (r.top + r.height / 2);
+      if (!bodyRef.current || !hubBox) return;
+      const [cx, cy] = restCentre();
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
       pointerX.set(Math.max(-320, Math.min(320, dx)));
 
+      if (!inNest && !nestInView()) {
+        // Deep in the page the nest is thousands of pixels away, and
+        // bolting all the way home abandoned the reader. Instead it
+        // climbs out of reach up its own line and drops back once the
+        // cursor has properly gone — hysteresis again, so it can't flicker.
+        setFleeing(fleeing ? dist < NEAR + 90 : dist < NEAR);
+        return;
+      }
+      setFleeing(false);
       bolted = inNest
         ? Math.hypot(e.clientX - hubBox.left, e.clientY - hubBox.top) < LEAVE
-        : Math.hypot(dx, dy) < NEAR;
+        : dist < NEAR;
       settle();
     };
 
     const onLeave = () => {
       pointerX.set(0);
       bolted = false;
+      setFleeing(false);
       settle();
     };
 
@@ -662,20 +768,34 @@ export default function HeroSpider() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // After every hook, so the hook order never changes when the viewport
-  // crosses the breakpoint.
-  if (!rigOn) return null;
+  const webPx = WEB_VIEW * layout.scale;
 
   return (
-    <div className="hero-spider" aria-hidden="true" ref={hubRef}>
+    // A page-sized clipping stage. On compact layouts the web and its
+    // mooring lines run off the right edge, and overflow on that side
+    // widens the document: on phones it pushed the navbar's toggle and
+    // menu button off-screen. body's overflow-x: hidden doesn't stop it
+    // (iOS Safari ignores it outright), so the rig clips itself.
+    <div className="hero-spider-stage" aria-hidden="true">
+    <div
+      className={`hero-spider hero-spider--${layoutName}${touch ? " hero-spider--touch" : ""}`}
+      ref={hubRef}
+    >
       {/* The nest. Its hub is this element's origin, so the dragline
           below starts exactly where the radials converge. */}
       <svg
         className="hero-spider__web"
         viewBox={`${-WEB_VIEW} ${-WEB_VIEW} ${WEB_VIEW * 2} ${WEB_VIEW * 2}`}
-        /* Box derived from the geometry so 1 unit stays 1px and the hub
-           stays on this element's origin whatever WEB_R becomes. */
-        style={{ width: WEB_VIEW * 2, height: WEB_VIEW * 2, margin: `${-WEB_VIEW}px 0 0 ${-WEB_VIEW}px` }}
+        /* Box derived from the geometry and the layout's scale, centred on
+           this element's origin, so the hub stays put at any size. The
+           mirror flips it about that same centre, and the patrol mirrors
+           its targets to match, so it still walks on real threads. */
+        style={{
+          width: webPx * 2,
+          height: webPx * 2,
+          margin: `${-webPx}px 0 0 ${-webPx}px`,
+          transform: layout.mirror < 0 ? "scaleX(-1)" : undefined,
+        }}
       >
         {ANCHORS.map(({ a, i }) => {
           const [x1, y1] = point(a, FRAME_R[i]);
@@ -759,7 +879,7 @@ export default function HeroSpider() {
           className="hero-spider__thread"
           /* No opacity fade: the silk is reeled in, not switched off, so
              its length alone takes it to nothing as the spider arrives. */
-          style={{ height: span, scaleY: threadScale, rotate: threadAngle }}
+          style={{ height: THREAD_PX, scaleY: threadScale, rotate: threadAngle }}
           /* Order matters and Framer's default is scale-then-rotate,
              which rotates an already-squashed box and shears the line
              off sideways instead of swinging it. Rotate first. */
@@ -777,16 +897,18 @@ export default function HeroSpider() {
             <defs>
               {/* Off-centre light source, so body and legs all shade from
                   the same top-left highlight and read as round. */}
+              {/* Stop colours come from theme tokens as CSS, not
+                  attributes, so the spider re-lights with the theme. */}
               <radialGradient id="sp-abdomen" cx="36%" cy="26%" r="82%">
-                <stop offset="0%" stopColor="#b02330" />
-                <stop offset="38%" stopColor="#7a121c" />
-                <stop offset="78%" stopColor="#420810" />
-                <stop offset="100%" stopColor="#1e0306" />
+                <stop offset="0%" style={{ stopColor: "var(--spider-abdomen-hi)" }} />
+                <stop offset="38%" style={{ stopColor: "var(--spider-abdomen-mid)" }} />
+                <stop offset="78%" style={{ stopColor: "var(--spider-abdomen-lo)" }} />
+                <stop offset="100%" style={{ stopColor: "var(--spider-abdomen-edge)" }} />
               </radialGradient>
               <radialGradient id="sp-thorax" cx="38%" cy="28%" r="84%">
-                <stop offset="0%" stopColor="#a11f2a" />
-                <stop offset="60%" stopColor="#5e0e16" />
-                <stop offset="100%" stopColor="#24040a" />
+                <stop offset="0%" style={{ stopColor: "var(--spider-thorax-hi)" }} />
+                <stop offset="60%" style={{ stopColor: "var(--spider-thorax-mid)" }} />
+                <stop offset="100%" style={{ stopColor: "var(--spider-thorax-lo)" }} />
               </radialGradient>
               {/* Soft-edged specular highlight — a flat white ellipse
                   read as a cut gem facet rather than a sheen. */}
@@ -796,9 +918,9 @@ export default function HeroSpider() {
                 <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
               </radialGradient>
               <linearGradient id="sp-leg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#8d1823" />
-                <stop offset="55%" stopColor="#4a0a11" />
-                <stop offset="100%" stopColor="#1b0205" />
+                <stop offset="0%" style={{ stopColor: "var(--spider-leg-hi)" }} />
+                <stop offset="55%" style={{ stopColor: "var(--spider-leg-mid)" }} />
+                <stop offset="100%" style={{ stopColor: "var(--spider-leg-lo)" }} />
               </linearGradient>
             </defs>
 
@@ -831,6 +953,7 @@ export default function HeroSpider() {
           </svg>
         </motion.div>
       </div>
+    </div>
     </div>
   );
 }
