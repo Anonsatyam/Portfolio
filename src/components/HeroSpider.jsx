@@ -164,45 +164,85 @@ const LAYOUTS = {
 /* ------------------------------------------------------------------ *
  * The web throw
  *
- * Every ten seconds, while it is simply hanging in view of the name, it
- * throws a strand at it. The strand splats into a small sticky web,
- * holds, lets go, and the web slides down the letters and falls away.
+ * Every ten seconds, while it is hanging in view of the name, it turns
+ * toward the S, takes aim, and throws. The strand bursts open into a web
+ * draped over the whole letter, holds, lets go, and the web peels off
+ * and drifts down the way web actually does.
  * ------------------------------------------------------------------ */
 const THROW_EVERY = 10000;
 const THROW_RETRY = 2000; // when the moment isn't right, look again soon
 const THROW_MAX = 900; // px; further than this and it isn't a throw
-// Head position down the body, as a fraction of the spider's width:
-// eyes at 64/92 of the drawing's height, less the 0.135 lift.
-const HEAD_AT = (64 / 92) * (92 / 100) - 0.135;
+// Where the spider's eyes are, measured from the body's rotation pivot,
+// as a fraction of its width: 64/92 of the drawing's height.
+const HEAD_FROM_PIVOT = (64 / 92) * (92 / 100);
+const LIFT = 0.135; // the pivot sits this far above the dragline's end
+const AIM_MAX = 38; // degrees: it turns toward the letter, not all the way
+const SPREAD_MS = 480; // the web bursting open over the letter
 
-// The slip and the fall are one continuous timeline on a single 0-1
-// progress value, so the web's velocity carries straight from sliding
-// into falling with no hitch where one would hand over to the other.
-const DROP_MS = 1750;
-const DETACH = 0.42; // point in the timeline where it lets go of the letters
-const CREEP = 14; // px it slides while still clinging on
-const FALL = 250; // px it falls after that
+/*
+ * How it comes off. Real web is almost weightless: drag dominates, so it
+ * reaches a slow terminal speed within a fraction of a second and then
+ * drifts rather than drops. It does not come away as one flat piece
+ * either — the top lets go first and folds down over the part still
+ * stuck, strands stretch between what's loose and what isn't, and as it
+ * falls the whole thing collapses into a sagging, swaying clump.
+ *
+ * So the web is a set of particles, each with its own moment of letting
+ * go (by height) and its own fall, drawn fresh every frame.
+ */
+const FALL_S = 3.1; // seconds from letting go to gone
+const PEEL_S = 0.62; // top lets go first; the bottom this much later
+const TERMINAL = 100; // px/s
+const DRAG_TC = 0.3; // s to approach terminal speed
+
+/** Distance fallen u seconds after letting go, with air drag. */
+const dragFall = (u) => (u <= 0 ? 0 : TERMINAL * (u - DRAG_TC * (1 - Math.exp(-u / DRAG_TC))));
+
+/** Overshoots and settles: a thrown web stretches past its rest, then holds. */
+const easeOutBack = (t) => {
+  const c = 1.4;
+  const x = Math.min(1, Math.max(0, t)) - 1;
+  return 1 + (c + 1) * x * x * x + c * x * x;
+};
 
 /**
- * Vertical position through the drop.
+ * The first letter's actual ink, in client coordinates.
  *
- * Clinging on, it creeps: adhesion gives way gradually, so it starts
- * almost still and accelerates (a power curve). Once it lets go it
- * keeps the speed it had and falls under constant acceleration. The
- * two pieces meet with matching position and velocity.
+ * A text range gives the character's box, which runs the full height of
+ * the font from ascender to descender — well above and below the S that
+ * is actually painted. The font's own metrics say where the glyph sits
+ * on the baseline, so the web can be sized to the letter, not its box.
  */
-function dropY(s) {
-  const n = 2.5;
-  if (s <= DETACH) return CREEP * (s / DETACH) ** n;
-  const v0 = (CREEP * n) / DETACH; // velocity at the moment it lets go
-  const t = s - DETACH;
-  const coast = v0 * t;
-  const gravity = (FALL - v0 * (1 - DETACH)) / (1 - DETACH) ** 2;
-  return CREEP + coast + gravity * t * t;
-}
+function firstGlyphBox(el) {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => (n.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+  });
+  const node = walker.nextNode();
+  if (!node) return null;
+  const i = node.textContent.search(/\S/);
+  const range = document.createRange();
+  range.setStart(node, i);
+  range.setEnd(node, i + 1);
+  const r = range.getBoundingClientRect();
+  if (!r.width) return null;
 
-/** How far into the free fall, 0 until it lets go. */
-const fallPart = (s) => Math.max(0, (s - DETACH) / (1 - DETACH));
+  const cs = getComputedStyle(node.parentElement);
+  firstGlyphBox.ctx ||= document.createElement("canvas").getContext("2d");
+  const ctx = firstGlyphBox.ctx;
+  ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const m = ctx.measureText(node.textContent[i]);
+  if (!m.actualBoundingBoxAscent || !m.fontBoundingBoxDescent) {
+    // No glyph metrics: trim the font box to roughly cap height instead.
+    return { left: r.left, right: r.right, top: r.top + r.height * 0.2, bottom: r.bottom - r.height * 0.22 };
+  }
+  const baseline = r.bottom - m.fontBoundingBoxDescent;
+  return {
+    left: r.left - m.actualBoundingBoxLeft,
+    right: r.left + m.actualBoundingBoxRight,
+    top: baseline - m.actualBoundingBoxAscent,
+    bottom: baseline + m.actualBoundingBoxDescent,
+  };
+}
 
 /**
  * The thrown line: a quadratic from the spider to the target, bowed by
@@ -234,35 +274,123 @@ function shotPoint(ox, oy, cx, cy, tx, ty, t) {
 }
 
 /**
- * A splat of sticky web. Irregular strands from a central glob, laced
- * with two rings pulled taut toward the centre, and beads of silk at
- * the strand ends. Fresh randomness every throw, so no two splats match.
+ * A thrown web sized to a w x h letter, centred on (0,0).
+ *
+ * Anchors ring the letter just past its edges, so the web drapes over
+ * all of it; radials run from the impact point to each anchor; three
+ * rounds of cross-threads lace them; and a few long strands cut across,
+ * which is the untidiness of a web that was thrown rather than woven.
+ * Fresh randomness every throw.
  */
-function makeSplat() {
-  const count = 7 + Math.floor(Math.random() * 2);
-  const strands = Array.from({ length: count }, (_, i) => {
-    const a = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-    const r = 15 + Math.random() * 15;
-    return { a, r, x: Math.cos(a) * r, y: Math.sin(a) * r };
-  });
-  // Rings sag inward between strands, the way a stretched net does.
-  const ring = (f) => {
-    let d = "";
-    strands.forEach((s, i) => {
-      const n = strands[(i + 1) % count];
-      const [x0, y0] = [s.x * f, s.y * f];
-      const [x1, y1] = [n.x * f, n.y * f];
-      const mx = ((x0 + x1) / 2) * 0.82;
-      const my = ((y0 + y1) / 2) * 0.82;
-      d += `${i === 0 ? `M${fmt(x0)},${fmt(y0)}` : ""}Q${fmt(mx)},${fmt(my)} ${fmt(x1)},${fmt(y1)}`;
+function makeWeb(w, h) {
+  const pts = [];
+  const add = (x, y) => pts.push({ x, y }) - 1;
+  const hub = add((Math.random() - 0.5) * w * 0.12, (Math.random() - 0.5) * h * 0.1);
+  const n = 9 + Math.floor(Math.random() * 3);
+  const rx = w * 0.66;
+  const ry = h * 0.6;
+  const ROUNDS = [0.3, 0.56, 0.8];
+  const anchors = [];
+  const rings = ROUNDS.map(() => []);
+  for (let i = 0; i < n; i += 1) {
+    const a = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * (Math.PI / n);
+    const j = 0.88 + Math.random() * 0.26;
+    const ax = Math.cos(a) * rx * j;
+    const ay = Math.sin(a) * ry * j;
+    anchors.push(add(ax, ay));
+    ROUNDS.forEach((f, k) => {
+      const fj = f * (0.9 + Math.random() * 0.2);
+      rings[k].push(add(pts[hub].x + (ax - pts[hub].x) * fj, pts[hub].y + (ay - pts[hub].y) * fj));
     });
-    return d;
+  }
+  const chords = Array.from({ length: 3 }, () => {
+    const i = Math.floor(Math.random() * n);
+    return [anchors[i], anchors[(i + 3 + Math.floor(Math.random() * 3)) % n]];
+  });
+
+  // Letting-go order by height: 0 at the top, 1 at the bottom.
+  const ys = pts.map((p) => p.y);
+  const top = Math.min(...ys);
+  const span = Math.max(...ys) - top || 1;
+  pts.forEach((p) => {
+    p.peel = (p.y - top) / span;
+    p.phase = Math.random() * Math.PI * 2;
+  });
+  return { pts, hub, anchors, rings, chords };
+}
+
+/**
+ * The web's shape at a moment: `spread` 0-1 as it bursts open, `s`
+ * seconds since it started letting go (negative while it still holds).
+ * Returns path data for the heavier strands, the finer cross-threads,
+ * and the beads of silk where it is stuck.
+ */
+function webFrame(web, spread, s) {
+  const { pts, hub, anchors, rings, chords } = web;
+  const hx = pts[hub].x;
+  const hy = pts[hub].y;
+  const open = easeOutBack(spread);
+
+  // Each particle: burst out from the impact point, then fall on its own
+  // schedule — the top first — with a flutter once it is loose.
+  const Q = pts.map((p) => {
+    const bx = hx + (p.x - hx) * open;
+    const by = hy + (p.y - hy) * open;
+    const u = s - p.peel * PEEL_S;
+    const loose = u > 0 ? 1 - Math.exp(-u / 0.5) : 0;
+    return [bx + Math.sin(s * 3.2 + p.phase) * 3.2 * loose, by + dragFall(u)];
+  });
+
+  if (s > 0) {
+    // Collapsing into a clump about its own centre as it falls, and
+    // swaying there. Only once the bottom has let go: before that,
+    // pulling inward would tear the still-stuck anchors off the letter.
+    let mx = 0;
+    let my = 0;
+    Q.forEach((q) => {
+      mx += q[0];
+      my += q[1];
+    });
+    mx /= Q.length;
+    my /= Q.length;
+    const c = Math.max(0, s - PEEL_S * 0.85);
+    const crumple = 0.58 * (1 - Math.exp(-c / 0.8));
+    const sway = 1 - Math.exp(-c / 0.6);
+    const angle = (Math.sin(s * 2.6 + 0.6) * 11 * sway * Math.PI) / 180;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const drift = Math.sin(s * 3.1) * 14 * sway;
+    Q.forEach((q) => {
+      const dx = (q[0] - mx) * (1 - crumple);
+      const dy = (q[1] - my) * (1 - crumple * 0.8);
+      q[0] = mx + dx * cos - dy * sin + drift;
+      q[1] = my + dx * sin + dy * cos;
+    });
+  }
+
+  // Loose silk sags; taut silk doesn't.
+  const slack = Math.min(1, Math.max(0, s / 0.5));
+  const hubQ = Q[hub];
+  const strand = (a, b, pull, sag) => {
+    const [x0, y0] = Q[a];
+    const [x1, y1] = Q[b];
+    const cx = (x0 + x1) / 2 + (hubQ[0] - (x0 + x1) / 2) * pull;
+    const cy = (y0 + y1) / 2 + (hubQ[1] - (y0 + y1) / 2) * pull + sag * slack;
+    return `M${fmt(x0)},${fmt(y0)}Q${fmt(cx)},${fmt(cy)} ${fmt(x1)},${fmt(y1)}`;
   };
-  return {
-    spokes: strands.map((s) => `M0,0L${fmt(s.x)},${fmt(s.y)}`).join(""),
-    rings: [ring(0.45), ring(0.78)],
-    beads: strands.filter((_, i) => i % 2 === 0).map((s) => [s.x, s.y]),
+  const around = (ring, pull, sag) => ring.map((idx, i) => strand(idx, ring[(i + 1) % ring.length], pull, sag)).join("");
+
+  const main =
+    anchors.map((a) => strand(hub, a, 0, 7)).join("") +
+    around(anchors, 0.07, 5) +
+    chords.map(([a, b]) => strand(a, b, 0.04, 9)).join("");
+  const fine = rings.map((ring) => around(ring, 0.12, 3)).join("");
+  const bead = (idx, r) => {
+    const [x, y] = Q[idx];
+    return `M${fmt(x - r)},${fmt(y)}a${r},${r} 0 1,0 ${r * 2},0a${r},${r} 0 1,0 ${-r * 2},0`;
   };
+  const beads = anchors.map((a) => bead(a, 1.5)).join("") + bead(hub, 3);
+  return { main, fine, beads, hub: hubQ };
 }
 
 /**
@@ -421,70 +549,17 @@ export default function HeroSpider() {
     ([d, iy, b, h, f, k, r]) => d + iy * r + (b + h + f + k) * (1 - r)
   );
 
-  // ---- the throw ------------------------------------------------------
-  // Geometry fixed at the moment of the throw — where the hub is and
-  // where the strand is aimed — in stage coordinates. The spider's end is
-  // not fixed: it is read live from offsetX/offsetY, the same two numbers
-  // that place the body, so the strand stays attached through the recoil
-  // and any sway, exactly as the dragline does.
+  // ---- the throw: state ------------------------------------------------
   const stageRef = useRef(null);
-  const shotRef = useRef(null);
+  const shotRef = useRef(null); // geometry fixed at the moment of the throw
   const [shot, setShot] = useState(null);
   const shotLen = useMotionValue(0); // visible fraction, from the spider out
   const shotArc = useMotionValue(0); // bow of the strand; see shotCurve
   const tipShow = useMotionValue(0); // the glob leading the strand in flight
-  const netPop = useMotionValue(0); // impact: splat springing open
-  const dropT = useMotionValue(0); // slip-then-fall timeline, 0-1
-
-  const shotGeom = (x, y, arc) => {
-    const g = shotRef.current;
-    if (!g) return null;
-    // From the spider's head — it hangs head down, so the front of it is
-    // near the bottom of the body: the eyes sit at 64/92 of its height,
-    // less the lift that tucks the body up onto its dragline.
-    const ox = g.hubX + x;
-    const oy = g.hubY + y + g.size * HEAD_AT;
-    return { ox, oy, ...shotCurve(ox, oy, g.tx, g.ty, arc) };
-  };
-  const shotD = useTransform([offsetX, offsetY, shotArc], ([x, y, arc]) => {
-    const c = shotGeom(x, y, arc);
-    return c ? `M${fmt(c.ox)},${fmt(c.oy)}Q${fmt(c.cx)},${fmt(c.cy)} ${fmt(shotRef.current.tx)},${fmt(shotRef.current.ty)}` : "M0,0";
-  });
-  const tipPos = useTransform([offsetX, offsetY, shotArc, shotLen], ([x, y, arc, len]) => {
-    const c = shotGeom(x, y, arc);
-    return c ? shotPoint(c.ox, c.oy, c.cx, c.cy, shotRef.current.tx, shotRef.current.ty, len) : [0, 0];
-  });
-  // Hidden outright at zero length. A zero-length dash with round caps
-  // still paints a dot at each end of the path, which left a stray pixel
-  // on the spider and another on the name after the strand was reeled in.
-  const shotShow = useTransform(shotLen, (v) => (v > 0.003 ? 1 : 0));
-  const tipX = useTransform(tipPos, (p) => p[0]);
-  const tipY = useTransform(tipPos, (p) => p[1]);
-
-  // Everything about the falling web derives from the one timeline, so
-  // position, twist, flutter, crumple and fade can never fall out of step.
-  const netX = useTransform(dropT, (s) => {
-    const f = fallPart(s);
-    const side = shotRef.current?.side ?? 1;
-    // Light things don't drop straight: it flutters side to side, more
-    // as it picks up speed, and drifts the way it was twisting.
-    return Math.sin(f * Math.PI * 3.2) * 9 * f + side * 20 * f * f;
-  });
-  const netY = useTransform(dropT, dropY);
-  const netRot = useTransform(dropT, (s) => {
-    const side = shotRef.current?.side ?? 1;
-    const cling = Math.min(1, s / DETACH);
-    const f = fallPart(s);
-    return side * (7 * cling * cling + 48 * f ** 1.4) + Math.sin(f * Math.PI * 3.2) * 9 * f;
-  });
-  const netScaleX = useTransform([dropT, netPop], ([s, pop]) => pop * (1 - 0.16 * fallPart(s)));
-  const netScaleY = useTransform([dropT, netPop], ([s, pop]) => {
-    const f = fallPart(s);
-    // Sags as it slips, then crumples as it falls, breathing with the flutter.
-    const cling = Math.min(1, s / DETACH);
-    return pop * (1 - 0.1 * cling - 0.32 * f + 0.07 * Math.sin(f * Math.PI * 3.2));
-  });
-  const netFade = useTransform(dropT, [0, 0.72, 1], [1, 1, 0]);
+  const spreadT = useMotionValue(0); // the web bursting open over the letter
+  const fallS = useMotionValue(-1); // seconds since it began letting go; <0 holds
+  // Turning toward the letter before throwing, on top of hanging straight.
+  const aimSpin = useMotionValue(0);
 
   const threadScale = useTransform([offsetX, offsetY], ([x, y]) => Math.hypot(x, y) / THREAD_PX);
   // Measured from straight down, which is where the unrotated element
@@ -507,7 +582,7 @@ export default function HeroSpider() {
   // Soft on purpose: a stiffer spring swung it through 180 degrees in
   // about 300ms, which read as flipping rather than turning.
   const facing = useSpring(facingTo, { stiffness: 100, damping: 20, mass: 0.75 });
-  const bodySpin = useTransform([threadAngle, facing, retreatSpring], ([a, f, r]) => {
+  const bodySpin = useTransform([threadAngle, facing, retreatSpring, aimSpin], ([a, f, r, aim]) => {
     // `facing` accumulates whole turns as the spider walks, so that it
     // always takes the short way round. Blending that raw number
     // against the thread angle made the body spin through every turn it
@@ -516,7 +591,57 @@ export default function HeroSpider() {
     // (-180, 180]. The fold is invisible: -180 and +180 render the same
     // rotation, and this is a derived value, not an animated one.
     const rel = f - Math.round(f / 360) * 360;
-    return a * (1 - r) + rel * r;
+    return (a + aim) * (1 - r) + rel * r;
+  });
+
+  // ---- the throw: geometry ---------------------------------------------
+  // The strand's spider end is not fixed. It is read live from the same
+  // numbers that place and turn the body, so it leaves from the head
+  // wherever the head is pointing — through the turn, the recoil and any
+  // sway — just as the dragline always lands on the spinnerets.
+  const shotGeom = (x, y, spin, arc) => {
+    const g = shotRef.current;
+    if (!g) return null;
+    // The body rotates about a pivot a little above the dragline's end;
+    // the eyes are HEAD_FROM_PIVOT down its axis from there. CSS rotate()
+    // runs clockwise, so the head direction is (-sin, cos).
+    const rad = (spin * Math.PI) / 180;
+    const d = g.size * HEAD_FROM_PIVOT;
+    const ox = g.hubX + x - Math.sin(rad) * d;
+    const oy = g.hubY + y - g.size * LIFT + Math.cos(rad) * d;
+    return { ox, oy, ...shotCurve(ox, oy, g.tx, g.ty, arc) };
+  };
+  const shotD = useTransform([offsetX, offsetY, bodySpin, shotArc], ([x, y, spin, arc]) => {
+    const c = shotGeom(x, y, spin, arc);
+    const g = shotRef.current;
+    return c ? `M${fmt(c.ox)},${fmt(c.oy)}Q${fmt(c.cx)},${fmt(c.cy)} ${fmt(g.tx)},${fmt(g.ty)}` : "M0,0";
+  });
+  const tipPos = useTransform([offsetX, offsetY, bodySpin, shotArc, shotLen], ([x, y, spin, arc, len]) => {
+    const c = shotGeom(x, y, spin, arc);
+    const g = shotRef.current;
+    return c ? shotPoint(c.ox, c.oy, c.cx, c.cy, g.tx, g.ty, len) : [0, 0];
+  });
+  // Hidden outright at zero length. A zero-length dash with round caps
+  // still paints a dot at each end of the path, which left a stray pixel
+  // on the spider and another on the name after the strand was reeled in.
+  const shotShow = useTransform(shotLen, (v) => (v > 0.003 ? 1 : 0));
+  const tipX = useTransform(tipPos, (p) => p[0]);
+  const tipY = useTransform(tipPos, (p) => p[1]);
+
+  // The web, drawn fresh from its particles each frame it is moving.
+  const webNow = useTransform([spreadT, fallS], ([sp, s]) => {
+    const web = shotRef.current?.web;
+    return web ? webFrame(web, sp, s) : null;
+  });
+  const webMain = useTransform(webNow, (f) => f?.main ?? "M0,0");
+  const webFine = useTransform(webNow, (f) => f?.fine ?? "M0,0");
+  const webBeads = useTransform(webNow, (f) => f?.beads ?? "M0,0");
+  // Invisible until the strand arrives — collapsed to a point before
+  // impact, its beads still painted a dot on the S during the aim — and
+  // fading only once it has well and truly let go and is drifting away.
+  const webFade = useTransform([spreadT, fallS], ([sp, s]) => {
+    if (sp < 0.01) return 0;
+    return s < 1.9 ? 1 : Math.max(0, 1 - (s - 1.9) / (FALL_S - 1.9));
   });
 
   // It should be hauling itself along the silk whenever it is moving —
@@ -902,20 +1027,29 @@ export default function HeroSpider() {
         document.querySelector(".hero__name-white .hero__name-line") ||
         document.querySelector(".hero__name");
       if (!stage || !hub || !line) return null;
-      const lr = line.getBoundingClientRect();
-      // The name has to be properly on screen to be worth aiming at.
-      if (lr.width < 20 || lr.bottom < 90 || lr.top > window.innerHeight - 60) return null;
+      // The S itself — its painted ink, not its text box.
+      const glyph = firstGlyphBox(line);
+      if (!glyph) return null;
+      // The letter has to be properly on screen to be worth aiming at.
+      if (glyph.bottom < 90 || glyph.top > window.innerHeight - 60) return null;
 
       const sr = stage.getBoundingClientRect();
       const hr = hub.getBoundingClientRect();
       const { size } = layoutRef.current;
       const hubX = hr.left - sr.left;
       const hubY = hr.top - sr.top;
-      // Somewhere on the letters rather than one fixed spot.
-      const tx = lr.left - sr.left + lr.width * (0.3 + Math.random() * 0.4);
-      const ty = lr.top - sr.top + lr.height * (0.42 + Math.random() * 0.16);
+      const w = glyph.right - glyph.left;
+      const h = glyph.bottom - glyph.top;
+      const web = makeWeb(w, h);
+      // Centre of the S, in stage coordinates; the strand strikes the
+      // web's hub, which sits near it.
+      const gx = (glyph.left + glyph.right) / 2 - sr.left;
+      const gy = (glyph.top + glyph.bottom) / 2 - sr.top;
+      const tx = gx + web.pts[web.hub].x;
+      const ty = gy + web.pts[web.hub].y;
+      // Measured from the head as it hangs now, before it turns.
       const ox = hubX + offsetX.get();
-      const oy = hubY + offsetY.get() + size * HEAD_AT;
+      const oy = hubY + offsetY.get() + size * (HEAD_FROM_PIVOT - LIFT);
       const dist = Math.hypot(tx - ox, ty - oy);
       if (dist < 60 || dist > THROW_MAX) return null;
 
@@ -935,7 +1069,12 @@ export default function HeroSpider() {
           }
         }
       }
-      return { hubX, hubY, tx, ty, ox, oy, dist, size, side: tx < ox ? -1 : 1 };
+      // How far to turn: pointing the head at the letter exactly would
+      // mean rolling most of the way onto its side, so it turns toward it
+      // and lets the strand's arc do the rest.
+      const toward = (-Math.atan2(tx - ox, ty - oy) * 180) / Math.PI;
+      const turn = Math.max(-AIM_MAX, Math.min(AIM_MAX, toward));
+      return { hubX, hubY, tx, ty, gx, gy, ox, oy, dist, size, web, turn };
     };
 
     // The name takes the hit: a 2-3px knock in the direction of the throw.
@@ -955,12 +1094,15 @@ export default function HeroSpider() {
       animate(kickY, 0, { type: "spring", stiffness: 140, damping: 14 });
     };
 
+    const unTurn = () => animate(aimSpin, 0, { type: "spring", stiffness: 70, damping: 13, mass: 0.9 });
+
     const finish = () => {
       settleKick();
+      unTurn();
       shotLen.set(0);
       tipShow.set(0);
-      netPop.set(0);
-      dropT.set(0);
+      spreadT.set(0);
+      fallS.set(-1);
       shotRef.current = null;
       if (alive) setShot(null);
       throwing = false;
@@ -976,66 +1118,79 @@ export default function HeroSpider() {
 
       throwing = true;
       shotRef.current = g;
-      const ux = (g.tx - g.ox) / g.dist;
-      const uy = (g.ty - g.oy) / g.dist;
       shotLen.set(0);
-      shotArc.set(g.dist * 0.14);
       tipShow.set(0);
-      netPop.set(0);
-      dropT.set(0);
-      setShot({
-        id: (throwId += 1),
-        splat: makeSplat(),
-        tx: g.tx,
-        ty: g.ty,
-        // The splat spreads along the line of flight, not evenly.
-        angle: (Math.atan2(uy, ux) * 180) / Math.PI,
-      });
+      spreadT.set(0);
+      fallS.set(-1);
+      setShot({ id: (throwId += 1), gx: g.gx, gy: g.gy });
 
-      // 1. Wind-up: it draws back, away from the name.
-      animate(kickX, -ux * 7, { duration: 0.22, ease: [0.3, 0, 0.2, 1] });
-      animate(kickY, -uy * 7 - 3, { duration: 0.22, ease: [0.3, 0, 0.2, 1] });
-      await later(230);
+      // 1. Turns toward the S, swinging its head round on its thread, and
+      // takes a beat to aim. Everything after is judged from where it
+      // actually ended up facing.
+      animate(aimSpin, g.turn, { duration: 0.46, ease: [0.45, 0, 0.25, 1] });
+      await later(620);
+      if (interrupted()) {
+        finish();
+        return true;
+      }
+      // Re-read the throw line from the turned head.
+      const head = shotGeom(offsetX.get(), offsetY.get(), bodySpin.get(), 0);
+      const dist = Math.hypot(g.tx - head.ox, g.ty - head.oy) || 1;
+      const ux = (g.tx - head.ox) / dist;
+      const uy = (g.ty - head.oy) / dist;
+      shotArc.set(dist * 0.14);
+
+      // 2. Wind-up: draws back, away from the letter.
+      animate(kickX, -ux * 7, { duration: 0.2, ease: [0.3, 0, 0.2, 1] });
+      animate(kickY, -uy * 7 - 3, { duration: 0.2, ease: [0.3, 0, 0.2, 1] });
+      animate(aimSpin, g.turn * 0.85, { duration: 0.2, ease: [0.3, 0, 0.2, 1] });
+      await later(210);
       if (interrupted()) {
         finish();
         return true;
       }
 
-      // 2. Throw. The glob leads with the strand paying out behind it —
+      // 3. Throw. The glob leads with the strand paying out behind it —
       // fastest off the spider and slowing as it flies — while the arc it
       // was thrown on flattens as the strand pulls itself straight. The
-      // spider lunges with the throw and swings back on its thread.
-      const flight = Math.min(0.42, Math.max(0.2, g.dist / 1500));
+      // spider lunges into the throw and swings back on its thread.
+      const flight = Math.min(0.42, Math.max(0.2, dist / 1500));
       tipShow.set(1);
       animate(kickX, ux * 6, { type: "spring", stiffness: 520, damping: 20 });
       animate(kickY, uy * 6, { type: "spring", stiffness: 520, damping: 20 });
+      animate(aimSpin, g.turn * 1.08, { type: "spring", stiffness: 420, damping: 18 });
       animate(shotLen, 1, { duration: flight, ease: [0.15, 0.7, 0.35, 1] });
-      animate(shotArc, g.dist * 0.02, { duration: flight, ease: [0.5, 0, 0.9, 0.6] });
+      animate(shotArc, dist * 0.02, { duration: flight, ease: [0.5, 0, 0.9, 0.6] });
       await later(flight * 1000);
       if (!alive) return true;
 
-      // 3. Impact: the glob splats open onto the letters, overshooting as
-      // it spreads, the strand snaps taut, and the name takes the knock.
+      // 4. Impact: the web bursts open from where it hit, stretching past
+      // the letter's edges and settling back over the whole S. The strand
+      // snaps taut and the name takes the knock.
       tipShow.set(0);
       animate(shotArc, 0, { duration: 0.12, ease: "easeOut" });
-      animate(netPop, 1, { type: "spring", stiffness: 560, damping: 14, mass: 0.6 });
+      animate(spreadT, 1, { duration: SPREAD_MS / 1000, ease: [0.2, 0.8, 0.3, 1] });
       knockName(ux, uy);
       settleKick();
 
-      // 4. Holds, taut — unless something takes the spider off its line.
-      for (let i = 0; i < 7 && !interrupted(); i += 1) await later(100);
+      // 5. Holds, taut — unless something takes the spider off its line.
+      for (let i = 0; i < 9 && !interrupted(); i += 1) await later(100);
       if (!alive) return true;
 
-      // 5. Lets go: the strand goes slack, sagging, and is reeled in.
-      animate(shotArc, -g.dist * 0.09, { duration: 0.4, ease: [0.2, 0.6, 0.4, 1] });
+      // 6. Lets go: the strand goes slack, sagging, and is reeled in while
+      // the spider turns back to hang straight.
+      animate(shotArc, -dist * 0.09, { duration: 0.4, ease: [0.2, 0.6, 0.4, 1] });
       animate(shotLen, 0, { duration: 0.46, ease: [0.55, 0, 0.8, 0.3] });
-      await later(160);
+      unTurn();
+      await later(180);
       if (!alive) return true;
 
-      // 6 and 7. With nothing holding it, the web slides down the letters
-      // and falls away — one continuous timeline; see dropY.
-      animate(dropT, 1, { duration: DROP_MS / 1000, ease: "linear" });
-      await later(DROP_MS + 40);
+      // 7. The web comes off: top first, folding down over the rest,
+      // then drifting down as a collapsing, swaying clump. Time is fed in
+      // linearly; the physics is in webFrame.
+      fallS.set(0); // from "holding" (-1) straight to the moment it lets go
+      animate(fallS, FALL_S, { duration: FALL_S, ease: "linear" });
+      await later(FALL_S * 1000 + 40);
       if (!alive) return true;
 
       finish();
@@ -1146,34 +1301,23 @@ export default function HeroSpider() {
           <motion.circle className="hero-spider__shot-tip" cx={tipX} cy={tipY} r="2.4" style={{ opacity: tipShow }} />
         </svg>
 
-        {/* The splat, pinned where the strand hit. */}
-        <motion.div
+        {/* The web over the S. Another 1px, overflow-visible SVG, placed on
+            the letter's centre; every strand is redrawn from the web's
+            particles, so it can peel, stretch, fold and crumple rather
+            than moving as one flat piece. */}
+        <motion.svg
           key={shot.id}
-          className="hero-spider__net"
-          style={{
-            left: shot.tx,
-            top: shot.ty,
-            x: netX,
-            y: netY,
-            rotate: netRot,
-            scaleX: netScaleX,
-            scaleY: netScaleY,
-            opacity: netFade,
-          }}
+          className="hero-spider__web-throw"
+          width="1"
+          height="1"
+          style={{ left: shot.gx, top: shot.gy, opacity: webFade }}
         >
-          <svg viewBox="-36 -36 72 72" style={{ transform: `rotate(${shot.angle}deg) scaleX(1.18)` }}>
-            {[shot.splat.spokes, ...shot.splat.rings].map((d, i) => (
-              <path key={`h${i}`} className="hero-spider__net-halo" d={d} />
-            ))}
-            {[shot.splat.spokes, ...shot.splat.rings].map((d, i) => (
-              <path key={`s${i}`} className={`hero-spider__net-silk${i ? " is-ring" : ""}`} d={d} />
-            ))}
-            {shot.splat.beads.map(([x, y], i) => (
-              <circle key={`b${i}`} className="hero-spider__net-bead" cx={x} cy={y} r="1.3" />
-            ))}
-            <circle className="hero-spider__net-glob" r="2.6" />
-          </svg>
-        </motion.div>
+          <motion.path className="hero-spider__net-halo" d={webMain} />
+          <motion.path className="hero-spider__net-halo is-fine" d={webFine} />
+          <motion.path className="hero-spider__net-silk" d={webMain} />
+          <motion.path className="hero-spider__net-silk is-ring" d={webFine} />
+          <motion.path className="hero-spider__net-bead" d={webBeads} />
+        </motion.svg>
       </>
     )}
     <div

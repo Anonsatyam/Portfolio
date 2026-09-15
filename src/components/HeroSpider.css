@@ -27,7 +27,7 @@
 }
 
 .hero-spider__shot path,
-.hero-spider__net path {
+.hero-spider__web-throw path {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -52,31 +52,31 @@
   stroke-width: 1.3;
 }
 
-.hero-spider__shot-tip,
-.hero-spider__net-glob,
-.hero-spider__net-bead {
+.hero-spider__shot-tip {
   fill: var(--spider-silk-top);
 }
 
-.hero-spider__net {
-  position: absolute;
-  width: 72px;
-  height: 72px;
-  margin: -36px 0 0 -36px;
-  /* Pivots a little above centre, where it clings longest. */
-  transform-origin: 50% 40%;
-  will-change: transform, opacity;
+/* Beads are drawn as circles inside one path, so they need fill back
+   after the shared fill: none above. */
+.hero-spider__web-throw path.hero-spider__net-bead {
+  fill: var(--spider-silk-top);
+  stroke: var(--color-bg);
+  stroke-opacity: 0.6;
+  stroke-width: 1;
 }
 
-.hero-spider__net svg {
-  width: 100%;
-  height: 100%;
+.hero-spider__web-throw {
+  position: absolute;
   max-width: none;
   overflow: visible;
 }
 
 .hero-spider__net-halo {
   stroke-width: 3;
+}
+
+.hero-spider__net-halo.is-fine {
+  stroke-width: 2.4;
 }
 
 .hero-spider__net-silk {
