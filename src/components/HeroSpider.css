@@ -65,8 +65,33 @@
   stroke-width: 1;
 }
 
+/* A 1px origin the web is drawn from: the card's top-left corner while
+   it is stuck (inside the card), or that same point on the page once it
+   has come off. */
+.hero-spider__web-frame {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+}
+
+.hero-spider__web-frame.is-on-card {
+  top: 0;
+  left: 0;
+}
+
+/* Invisible markers read back from the screen: the web's hub, and the
+   card's origin and x-axis. */
+.hero-spider__pin {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
 .hero-spider__web-throw {
   position: absolute;
+  top: 0;
+  left: 0;
   max-width: none;
   overflow: visible;
 }

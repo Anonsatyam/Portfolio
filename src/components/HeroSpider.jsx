@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   animate,
+  cancelFrame,
+  frame,
   motion,
   useMotionValue,
   useMotionValueEvent,
@@ -9,6 +12,7 @@ import {
   useTransform,
 } from "framer-motion";
 import { prefersReducedMotion } from "../lib/motion";
+import { cardTug } from "../lib/cardTug";
 import "./HeroSpider.css";
 
 const RAD = Math.PI / 180;
@@ -164,20 +168,26 @@ const LAYOUTS = {
 /* ------------------------------------------------------------------ *
  * The web throw
  *
- * Every ten seconds, while it is hanging in view of the name, it turns
- * toward the S, takes aim, and throws. The strand bursts open into a web
- * draped over the whole letter, holds, lets go, and the web peels off
- * and drifts down the way web actually does.
+ * Every ten seconds, while it is hanging with the ID card in view, it
+ * turns toward the card, takes aim and throws. The strand bursts open
+ * into a small web on the card's bottom-left corner, the spider hauls on it and drags the
+ * card toward itself against its spring, then lets go: the card swings
+ * back and the jolt shakes the web off, which peels away and drifts
+ * down the way web actually does. Not on phones.
  * ------------------------------------------------------------------ */
 const THROW_EVERY = 10000;
 const THROW_RETRY = 2000; // when the moment isn't right, look again soon
-const THROW_MAX = 900; // px; further than this and it isn't a throw
+// On wide screens the card is across the hero from the spider.
+const THROW_MAX = 1500;
+// "Drag it a bit": the card's own spring turns any sideways pull into
+// extra tilt on top of this, so both are kept modest.
+const PULL = 22; // px the card is dragged, at full haul
+const SPIN_MAX = 5; // degrees a corner pull turns the card about its hook
 // Where the spider's eyes are, measured from the body's rotation pivot,
 // as a fraction of its width: 64/92 of the drawing's height.
 const HEAD_FROM_PIVOT = (64 / 92) * (92 / 100);
 const LIFT = 0.135; // the pivot sits this far above the dragline's end
 const AIM_MAX = 38; // degrees: it turns toward the letter, not all the way
-const SPREAD_MS = 480; // the web bursting open over the letter
 
 /*
  * How it comes off. Real web is almost weightless: drag dominates, so it
@@ -190,9 +200,10 @@ const SPREAD_MS = 480; // the web bursting open over the letter
  * So the web is a set of particles, each with its own moment of letting
  * go (by height) and its own fall, drawn fresh every frame.
  */
-const FALL_S = 3.1; // seconds from letting go to gone
-const PEEL_S = 0.62; // top lets go first; the bottom this much later
-const TERMINAL = 100; // px/s
+const FALL_S = 2.3; // seconds from letting go to gone
+const FADE_FROM = 1.3; // seconds in, when it starts to fade
+const PEEL_S = 0.4; // top lets go first; the bottom this much later
+const TERMINAL = 95; // px/s
 const DRAG_TC = 0.3; // s to approach terminal speed
 
 /** Distance fallen u seconds after letting go, with air drag. */
@@ -205,43 +216,10 @@ const easeOutBack = (t) => {
   return 1 + (c + 1) * x * x * x + c * x * x;
 };
 
-/**
- * The first letter's actual ink, in client coordinates.
- *
- * A text range gives the character's box, which runs the full height of
- * the font from ascender to descender — well above and below the S that
- * is actually painted. The font's own metrics say where the glyph sits
- * on the baseline, so the web can be sized to the letter, not its box.
- */
-function firstGlyphBox(el) {
-  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
-    acceptNode: (n) => (n.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
-  });
-  const node = walker.nextNode();
-  if (!node) return null;
-  const i = node.textContent.search(/\S/);
-  const range = document.createRange();
-  range.setStart(node, i);
-  range.setEnd(node, i + 1);
-  const r = range.getBoundingClientRect();
-  if (!r.width) return null;
-
-  const cs = getComputedStyle(node.parentElement);
-  firstGlyphBox.ctx ||= document.createElement("canvas").getContext("2d");
-  const ctx = firstGlyphBox.ctx;
-  ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-  const m = ctx.measureText(node.textContent[i]);
-  if (!m.actualBoundingBoxAscent || !m.fontBoundingBoxDescent) {
-    // No glyph metrics: trim the font box to roughly cap height instead.
-    return { left: r.left, right: r.right, top: r.top + r.height * 0.2, bottom: r.bottom - r.height * 0.22 };
-  }
-  const baseline = r.bottom - m.fontBoundingBoxDescent;
-  return {
-    left: r.left - m.actualBoundingBoxLeft,
-    right: r.left + m.actualBoundingBoxRight,
-    top: baseline - m.actualBoundingBoxAscent,
-    bottom: baseline + m.actualBoundingBoxDescent,
-  };
+/** Centre of an element on screen. */
+function centreOf(el) {
+  const r = el.getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
 }
 
 /**
@@ -322,20 +300,27 @@ function makeWeb(w, h) {
 /**
  * The web's shape at a moment: `spread` 0-1 as it bursts open, `s`
  * seconds since it started letting go (negative while it still holds).
+ * (cx, cy) is where its centre sits in its container, and `rot` (radians)
+ * turns its resting shape — used once it has come off a tilted card, so
+ * that it keeps its angle but falls straight down in the world.
  * Returns path data for the heavier strands, the finer cross-threads,
  * and the beads of silk where it is stuck.
  */
-function webFrame(web, spread, s) {
+function webFrame(web, spread, s, cx = 0, cy = 0, rot = 0) {
   const { pts, hub, anchors, rings, chords } = web;
   const hx = pts[hub].x;
   const hy = pts[hub].y;
   const open = easeOutBack(spread);
+  const rc = Math.cos(rot);
+  const rs = Math.sin(rot);
 
   // Each particle: burst out from the impact point, then fall on its own
   // schedule — the top first — with a flutter once it is loose.
   const Q = pts.map((p) => {
-    const bx = hx + (p.x - hx) * open;
-    const by = hy + (p.y - hy) * open;
+    const lx = cx + hx + (p.x - hx) * open;
+    const ly = cy + hy + (p.y - hy) * open;
+    const bx = lx * rc - ly * rs;
+    const by = lx * rs + ly * rc;
     const u = s - p.peel * PEEL_S;
     const loose = u > 0 ? 1 - Math.exp(-u / 0.5) : 0;
     return [bx + Math.sin(s * 3.2 + p.phase) * 3.2 * loose, by + dragFall(u)];
@@ -556,10 +541,17 @@ export default function HeroSpider() {
   const shotLen = useMotionValue(0); // visible fraction, from the spider out
   const shotArc = useMotionValue(0); // bow of the strand; see shotCurve
   const tipShow = useMotionValue(0); // the glob leading the strand in flight
-  const spreadT = useMotionValue(0); // the web bursting open over the letter
+  const spreadT = useMotionValue(0); // the web bursting open on the card
   const fallS = useMotionValue(-1); // seconds since it began letting go; <0 holds
-  // Turning toward the letter before throwing, on top of hanging straight.
+  // Turning toward the card before throwing, on top of hanging straight.
   const aimSpin = useMotionValue(0);
+  // The strand's far end, in stage coordinates. While the web is on the
+  // card this is read every frame from where the web's hub actually is on
+  // screen, so the strand follows the card through every swing and turn.
+  const endX = useMotionValue(0);
+  const endY = useMotionValue(0);
+  // Once the web comes off, the angle the card was at, baked into its shape.
+  const freeRot = useMotionValue(0);
 
   const threadScale = useTransform([offsetX, offsetY], ([x, y]) => Math.hypot(x, y) / THREAD_PX);
   // Measured from straight down, which is where the unrotated element
@@ -599,7 +591,10 @@ export default function HeroSpider() {
   // numbers that place and turn the body, so it leaves from the head
   // wherever the head is pointing — through the turn, the recoil and any
   // sway — just as the dragline always lands on the spinnerets.
-  const shotGeom = (x, y, spin, arc) => {
+  //
+  // The far end is just as live: endX/endY, read every frame from where
+  // the web's hub really is on screen.
+  const shotGeom = (x, y, spin, arc, tx, ty) => {
     const g = shotRef.current;
     if (!g) return null;
     // The body rotates about a pivot a little above the dragline's end;
@@ -609,18 +604,22 @@ export default function HeroSpider() {
     const d = g.size * HEAD_FROM_PIVOT;
     const ox = g.hubX + x - Math.sin(rad) * d;
     const oy = g.hubY + y - g.size * LIFT + Math.cos(rad) * d;
-    return { ox, oy, ...shotCurve(ox, oy, g.tx, g.ty, arc) };
+    return { ox, oy, tx, ty, ...shotCurve(ox, oy, tx, ty, arc) };
   };
-  const shotD = useTransform([offsetX, offsetY, bodySpin, shotArc], ([x, y, spin, arc]) => {
-    const c = shotGeom(x, y, spin, arc);
-    const g = shotRef.current;
-    return c ? `M${fmt(c.ox)},${fmt(c.oy)}Q${fmt(c.cx)},${fmt(c.cy)} ${fmt(g.tx)},${fmt(g.ty)}` : "M0,0";
-  });
-  const tipPos = useTransform([offsetX, offsetY, bodySpin, shotArc, shotLen], ([x, y, spin, arc, len]) => {
-    const c = shotGeom(x, y, spin, arc);
-    const g = shotRef.current;
-    return c ? shotPoint(c.ox, c.oy, c.cx, c.cy, g.tx, g.ty, len) : [0, 0];
-  });
+  const shotD = useTransform(
+    [offsetX, offsetY, bodySpin, shotArc, endX, endY],
+    ([x, y, spin, arc, tx, ty]) => {
+      const c = shotGeom(x, y, spin, arc, tx, ty);
+      return c ? `M${fmt(c.ox)},${fmt(c.oy)}Q${fmt(c.cx)},${fmt(c.cy)} ${fmt(tx)},${fmt(ty)}` : "M0,0";
+    }
+  );
+  const tipPos = useTransform(
+    [offsetX, offsetY, bodySpin, shotArc, shotLen, endX, endY],
+    ([x, y, spin, arc, len, tx, ty]) => {
+      const c = shotGeom(x, y, spin, arc, tx, ty);
+      return c ? shotPoint(c.ox, c.oy, c.cx, c.cy, tx, ty, len) : [0, 0];
+    }
+  );
   // Hidden outright at zero length. A zero-length dash with round caps
   // still paints a dot at each end of the path, which left a stray pixel
   // on the spider and another on the name after the strand was reeled in.
@@ -628,20 +627,38 @@ export default function HeroSpider() {
   const tipX = useTransform(tipPos, (p) => p[0]);
   const tipY = useTransform(tipPos, (p) => p[1]);
 
-  // The web, drawn fresh from its particles each frame it is moving.
-  const webNow = useTransform([spreadT, fallS], ([sp, s]) => {
-    const web = shotRef.current?.web;
-    return web ? webFrame(web, sp, s) : null;
+  // The web, drawn fresh from its particles each frame it is moving, in
+  // card coordinates (origin at the card's top-left). While stuck it is
+  // rendered inside the card, which does all the moving. When it comes
+  // off it is drawn on the page instead, with the card's angle at that
+  // instant baked into its shape, so it keeps that angle but falls
+  // straight down rather than along the card's slant.
+  //
+  // Two separate shapes — on the card (unrotated, since the card does the
+  // rotating) and on the page (angle baked in) — rather than one shape
+  // switched by a flag: the switch is a React commit and the angle a
+  // motion value, and letting them update a frame apart flashed the web at
+  // double its angle at the moment it came off.
+  const webOnCard = useTransform([spreadT, fallS], ([sp, s]) => {
+    const g = shotRef.current;
+    return g ? webFrame(g.web, sp, s, g.lcx, g.lcy, 0) : null;
   });
-  const webMain = useTransform(webNow, (f) => f?.main ?? "M0,0");
-  const webFine = useTransform(webNow, (f) => f?.fine ?? "M0,0");
-  const webBeads = useTransform(webNow, (f) => f?.beads ?? "M0,0");
+  const webOnPage = useTransform([spreadT, fallS, freeRot], ([sp, s, rot]) => {
+    const g = shotRef.current;
+    return g ? webFrame(g.web, sp, s, g.lcx, g.lcy, rot) : null;
+  });
+  const cardMain = useTransform(webOnCard, (f) => f?.main ?? "M0,0");
+  const cardFine = useTransform(webOnCard, (f) => f?.fine ?? "M0,0");
+  const cardBeads = useTransform(webOnCard, (f) => f?.beads ?? "M0,0");
+  const pageMain = useTransform(webOnPage, (f) => f?.main ?? "M0,0");
+  const pageFine = useTransform(webOnPage, (f) => f?.fine ?? "M0,0");
+  const pageBeads = useTransform(webOnPage, (f) => f?.beads ?? "M0,0");
   // Invisible until the strand arrives — collapsed to a point before
-  // impact, its beads still painted a dot on the S during the aim — and
-  // fading only once it has well and truly let go and is drifting away.
+  // impact, its beads still painted a dot while the spider was aiming —
+  // and fading only once it has well and truly let go and is drifting away.
   const webFade = useTransform([spreadT, fallS], ([sp, s]) => {
     if (sp < 0.01) return 0;
-    return s < 1.9 ? 1 : Math.max(0, 1 - (s - 1.9) / (FALL_S - 1.9));
+    return s < FADE_FROM ? 1 : Math.max(0, 1 - (s - FADE_FROM) / (FALL_S - FADE_FROM));
   });
 
   // It should be hauling itself along the silk whenever it is moving —
@@ -1023,71 +1040,53 @@ export default function HeroSpider() {
     const aim = () => {
       const stage = stageRef.current;
       const hub = hubRef.current;
-      const line =
-        document.querySelector(".hero__name-white .hero__name-line") ||
-        document.querySelector(".hero__name");
-      if (!stage || !hub || !line) return null;
-      // The S itself — its painted ink, not its text box.
-      const glyph = firstGlyphBox(line);
-      if (!glyph) return null;
-      // The letter has to be properly on screen to be worth aiming at.
-      if (glyph.bottom < 90 || glyph.top > window.innerHeight - 60) return null;
+      if (!stage || !hub) return null;
+      // Someone has hold of the card: leave it to them.
+      if (cardTug.dragging) return null;
+      const slot = document.querySelector(".id-card__web-slot");
+      if (!slot || !slot.offsetWidth) return null;
+      // The card has to be properly on screen to be worth aiming at.
+      const cr = slot.getBoundingClientRect();
+      if (cr.top < 60 || cr.bottom > window.innerHeight - 30) return null;
 
       const sr = stage.getBoundingClientRect();
       const hr = hub.getBoundingClientRect();
       const { size } = layoutRef.current;
       const hubX = hr.left - sr.left;
       const hubY = hr.top - sr.top;
-      const w = glyph.right - glyph.left;
-      const h = glyph.bottom - glyph.top;
-      const web = makeWeb(w, h);
-      // Centre of the S, in stage coordinates; the strand strikes the
-      // web's hub, which sits near it.
-      const gx = (glyph.left + glyph.right) / 2 - sr.left;
-      const gy = (glyph.top + glyph.bottom) / 2 - sr.top;
-      const tx = gx + web.pts[web.hub].x;
-      const ty = gy + web.pts[web.hub].y;
+
+      // A small web on the bottom-left corner, in card coordinates (origin
+      // at its top-left), centred just inside the corner so that half of
+      // it wraps over the edges. Untransformed size, so a swinging card
+      // doesn't skew the numbers.
+      const W = slot.offsetWidth;
+      const H = slot.offsetHeight;
+      const webSize = Math.max(38, Math.min(50, W * 0.19));
+      const lcx = webSize * 0.3;
+      const lcy = H - webSize * 0.3;
+      const web = makeWeb(webSize, webSize);
+      const hubPt = web.pts[web.hub];
+
+      const g = { hubX, hubY, size, slot, lcx, lcy, web, W, H, hubLX: lcx + hubPt.x, hubLY: lcy + hubPt.y };
+      // Roughly where the corner is now; tracked exactly once the web is on.
+      const tx = cr.left - sr.left + g.hubLX;
+      const ty = cr.top - sr.top + g.hubLY;
       // Measured from the head as it hangs now, before it turns.
       const ox = hubX + offsetX.get();
       const oy = hubY + offsetY.get() + size * (HEAD_FROM_PIVOT - LIFT);
       const dist = Math.hypot(tx - ox, ty - oy);
       if (dist < 60 || dist > THROW_MAX) return null;
 
-      // Never through the ID card. On two-column layouts below the wide
-      // breakpoint it sits squarely between the spider and the name, and
-      // silk flying through it looks like a bug, not a throw. Both the
-      // arcing flight path and the taut strand after are checked.
-      const card = document.querySelector(".id-card__card")?.getBoundingClientRect();
-      if (card && card.width) {
-        const pad = 14;
-        const box = [card.left - sr.left - pad, card.right - sr.left + pad, card.top - sr.top - pad, card.bottom - sr.top + pad];
-        const { cx, cy } = shotCurve(ox, oy, tx, ty, dist * 0.14);
-        for (let i = 1; i < 24; i += 1) {
-          const t = i / 24;
-          for (const [x, y] of [shotPoint(ox, oy, cx, cy, tx, ty, t), [ox + (tx - ox) * t, oy + (ty - oy) * t]]) {
-            if (x > box[0] && x < box[1] && y > box[2] && y < box[3]) return null;
-          }
-        }
-      }
-      // How far to turn: pointing the head at the letter exactly would
-      // mean rolling most of the way onto its side, so it turns toward it
-      // and lets the strand's arc do the rest.
+      // How far to turn: pointing the head at the card exactly would mean
+      // rolling most of the way onto its side, so it turns toward it and
+      // lets the strand's arc do the rest.
       const toward = (-Math.atan2(tx - ox, ty - oy) * 180) / Math.PI;
-      const turn = Math.max(-AIM_MAX, Math.min(AIM_MAX, toward));
-      return { hubX, hubY, tx, ty, gx, gy, ox, oy, dist, size, web, turn };
+      g.turn = Math.max(-AIM_MAX, Math.min(AIM_MAX, toward));
+      return g;
     };
 
-    // The name takes the hit: a 2-3px knock in the direction of the throw.
-    const knockName = (ux, uy) => {
-      document.querySelector(".hero__name")?.animate?.(
-        [
-          { transform: "translate(0, 0)" },
-          { transform: `translate(${(ux * 2.5).toFixed(2)}px, ${(uy * 2.5).toFixed(2)}px)` },
-          { transform: "translate(0, 0)" },
-        ],
-        { duration: 300, easing: "cubic-bezier(0.2, 0.7, 0.3, 1)" }
-      );
-    };
+    // Phones get no throw at all. Tablets and anything bigger do.
+    const isPhone = () => touch && Math.min(window.screen.width, window.screen.height) < 600;
 
     const settleKick = () => {
       animate(kickX, 0, { type: "spring", stiffness: 140, damping: 14 });
@@ -1096,21 +1095,66 @@ export default function HeroSpider() {
 
     const unTurn = () => animate(aimSpin, 0, { type: "spring", stiffness: 70, damping: 13, mass: 0.9 });
 
+    // The card swings back on a loose spring, past where it rests, and
+    // wobbles to a stop — a released load, not a tidy return.
+    const releaseCard = () => {
+      const loose = { type: "spring", stiffness: 190, damping: 8, mass: 0.9 };
+      animate(cardTug.x, 0, loose);
+      animate(cardTug.y, 0, loose);
+      animate(cardTug.spin, 0, loose);
+    };
+
+    // Keeps the strand's far end on the web's hub, read from the screen
+    // every frame while the web is on the card. Reading the real position
+    // is what makes it impossible for the two to come apart, however the
+    // card swings, turns or leans.
+    //
+    // It runs in Framer's postRender step — after the card has been moved
+    // this frame — and writes the strand's path straight to the DOM, so the
+    // line and the card land in the same painted frame. Reading earlier (a
+    // plain rAF) saw the card one frame late; the corner is ~500px from the
+    // hook, so a turning card left the line up to 16px short of the web.
+    const tracker = () => {
+      const g = shotRef.current;
+      const stage = stageRef.current;
+      const pin = g?.slot.querySelector(".hero-spider__pin-hub");
+      if (!g || !stage || !pin) return;
+      const [px, py] = centreOf(pin);
+      const sr = stage.getBoundingClientRect();
+      const x = px - sr.left;
+      const y = py - sr.top;
+      endX.set(x);
+      endY.set(y);
+      const c = shotGeom(offsetX.get(), offsetY.get(), bodySpin.get(), shotArc.get(), x, y);
+      if (!c) return;
+      const d = `M${fmt(c.ox)},${fmt(c.oy)}Q${fmt(c.cx)},${fmt(c.cy)} ${fmt(x)},${fmt(y)}`;
+      stage.querySelectorAll(".hero-spider__shot path").forEach((el) => el.setAttribute("d", d));
+    };
+    const startTracking = () => frame.postRender(tracker, true);
+    const stopTracking = () => cancelFrame(tracker);
+
     const finish = () => {
+      stopTracking();
       settleKick();
       unTurn();
+      releaseCard();
       shotLen.set(0);
       tipShow.set(0);
       spreadT.set(0);
       fallS.set(-1);
+      freeRot.set(0);
       shotRef.current = null;
       if (alive) setShot(null);
       throwing = false;
     };
 
+    // Anything that ends the haul early — the spider driven off its line,
+    // or someone grabbing the card — lets go of the card at once.
+    const cutShort = () => interrupted() || cardTug.dragging;
+
     /** Resolves true if a throw happened. */
     const throwWeb = async () => {
-      if (throwing || interrupted() || document.hidden) return false;
+      if (throwing || interrupted() || document.hidden || isPhone()) return false;
       // Hanging still, not mid-climb or being hauled along by a scroll.
       if (retreat.get() > 0.02 || Math.abs(offsetY.getVelocity()) > 40) return false;
       const g = aim();
@@ -1122,72 +1166,138 @@ export default function HeroSpider() {
       tipShow.set(0);
       spreadT.set(0);
       fallS.set(-1);
-      setShot({ id: (throwId += 1), gx: g.gx, gy: g.gy });
+      freeRot.set(0);
+      setShot({ id: (throwId += 1), free: null });
+      // Let the web mount inside the card, then keep the strand pinned to it.
+      await later(40);
+      if (!alive) return true;
+      startTracking();
 
-      // 1. Turns toward the S, swinging its head round on its thread, and
-      // takes a beat to aim. Everything after is judged from where it
-      // actually ended up facing.
-      animate(aimSpin, g.turn, { duration: 0.46, ease: [0.45, 0, 0.25, 1] });
-      await later(620);
-      if (interrupted()) {
-        finish();
-        return true;
-      }
-      // Re-read the throw line from the turned head.
-      const head = shotGeom(offsetX.get(), offsetY.get(), bodySpin.get(), 0);
-      const dist = Math.hypot(g.tx - head.ox, g.ty - head.oy) || 1;
-      const ux = (g.tx - head.ox) / dist;
-      const uy = (g.ty - head.oy) / dist;
-      shotArc.set(dist * 0.14);
+      const ease = (d, e = [0.3, 0, 0.2, 1]) => ({ duration: d, ease: e });
 
-      // 2. Wind-up: draws back, away from the letter.
-      animate(kickX, -ux * 7, { duration: 0.2, ease: [0.3, 0, 0.2, 1] });
-      animate(kickY, -uy * 7 - 3, { duration: 0.2, ease: [0.3, 0, 0.2, 1] });
-      animate(aimSpin, g.turn * 0.85, { duration: 0.2, ease: [0.3, 0, 0.2, 1] });
-      await later(210);
-      if (interrupted()) {
+      // 1. Aim (0.5s). It turns its head toward the card and rises a touch
+      // on its thread — the moment before, so the throw has an origin.
+      animate(aimSpin, g.turn, ease(0.42, [0.45, 0, 0.25, 1]));
+      animate(kickY, -6, ease(0.42, [0.45, 0, 0.25, 1]));
+      await later(500);
+      if (cutShort()) {
         finish();
         return true;
       }
 
-      // 3. Throw. The glob leads with the strand paying out behind it —
-      // fastest off the spider and slowing as it flies — while the arc it
-      // was thrown on flattens as the strand pulls itself straight. The
-      // spider lunges into the throw and swings back on its thread.
-      const flight = Math.min(0.42, Math.max(0.2, dist / 1500));
+      // Judged from where it actually ended up facing.
+      const head = shotGeom(offsetX.get(), offsetY.get(), bodySpin.get(), 0, endX.get(), endY.get());
+      const dist = Math.hypot(head.tx - head.ox, head.ty - head.oy) || 1;
+      const ux = (head.tx - head.ox) / dist;
+      const uy = (head.ty - head.oy) / dist;
+
+      // 2. Thwip (0.35s). The glob fires on a shallow arc with the line
+      // trailing behind; the line wavers in flight and pulls straight as
+      // it arrives. The kick swings the spider back on its dragline.
+      const flight = Math.min(0.45, Math.max(0.24, dist / 2600));
       tipShow.set(1);
-      animate(kickX, ux * 6, { type: "spring", stiffness: 520, damping: 20 });
-      animate(kickY, uy * 6, { type: "spring", stiffness: 520, damping: 20 });
-      animate(aimSpin, g.turn * 1.08, { type: "spring", stiffness: 420, damping: 18 });
-      animate(shotLen, 1, { duration: flight, ease: [0.15, 0.7, 0.35, 1] });
-      animate(shotArc, dist * 0.02, { duration: flight, ease: [0.5, 0, 0.9, 0.6] });
+      animate(kickX, -ux * 9, { type: "spring", stiffness: 360, damping: 15 });
+      animate(kickY, -uy * 9 - 4, { type: "spring", stiffness: 360, damping: 15 });
+      animate(aimSpin, g.turn * 0.82, { type: "spring", stiffness: 300, damping: 16 });
+      animate(shotLen, 1, ease(flight, [0.1, 0.65, 0.3, 1]));
+      animate(shotArc, [dist * 0.12, dist * 0.035, -dist * 0.012, 0], {
+        duration: flight + 0.12,
+        times: [0, 0.6, 0.86, 1],
+        ease: "easeOut",
+      });
       await later(flight * 1000);
       if (!alive) return true;
 
-      // 4. Impact: the web bursts open from where it hit, stretching past
-      // the letter's edges and settling back over the whole S. The strand
-      // snaps taut and the name takes the knock.
+      // Which way a pull at the bottom-left corner turns the card: the
+      // corner sits down and left of the hook, and the pull runs back
+      // toward the spider. (r x F, with CSS rotation running clockwise.)
+      const rx = -g.W / 2;
+      const ry = g.H;
+      const torque = (rx * -uy - ry * -ux) / Math.hypot(rx, ry);
+      const spinFor = (f) => Math.max(-1, Math.min(1, torque)) * SPIN_MAX * f;
+
+      // 3. Splat (0.25s). The glob hits the corner and bursts into a small
+      // web wrapped over the edges; the hit makes the card twitch.
       tipShow.set(0);
-      animate(shotArc, 0, { duration: 0.12, ease: "easeOut" });
-      animate(spreadT, 1, { duration: SPREAD_MS / 1000, ease: [0.2, 0.8, 0.3, 1] });
-      knockName(ux, uy);
+      animate(spreadT, 1, ease(0.3, [0.2, 0.9, 0.3, 1]));
+      animate(cardTug.x, [0, ux * 5, 0], ease(0.4, [0.2, 0.7, 0.3, 1]));
+      animate(cardTug.spin, [0, -spinFor(0.3), 0], ease(0.4, [0.2, 0.7, 0.3, 1]));
       settleKick();
+      await later(250);
+      if (cutShort()) return snap(g, dist, ux);
 
-      // 5. Holds, taut — unless something takes the spider off its line.
-      for (let i = 0; i < 9 && !interrupted(); i += 1) await later(100);
+      // 4. Tension (0.25s). The line pulls straight and the spider braces.
+      animate(kickX, -ux * 5, ease(0.25));
+      animate(kickY, -uy * 5, ease(0.25));
+      await later(250);
+      if (cutShort()) return snap(g, dist, ux);
+
+      // 5. Tug (0.75s). Two heaves on the rope: the corner is dragged toward
+      // the spider so the card turns on its hook and its spring stretches;
+      // a little give as the spring fights back; then a harder heave. The
+      // spider leans back against the load.
+      const px = -ux * PULL;
+      const py = Math.max(-18, Math.min(18, -uy * PULL));
+      const heave = (f, d, e) => {
+        animate(cardTug.x, px * f, ease(d, e));
+        animate(cardTug.y, py * f, ease(d, e));
+        animate(cardTug.spin, spinFor(f), ease(d, e));
+      };
+      animate(kickX, -ux * 12, ease(0.3));
+      animate(kickY, -uy * 12, ease(0.3));
+      heave(0.6, 0.3, [0.35, 0, 0.2, 1]);
+      await later(300);
+      if (cutShort()) return snap(g, dist, ux);
+      heave(0.42, 0.12, [0.4, 0, 0.6, 1]);
+      await later(120);
+      if (cutShort()) return snap(g, dist, ux);
+      animate(kickX, -ux * 16, ease(0.33));
+      heave(1, 0.33, [0.2, 0.75, 0.2, 1]);
+      await later(330);
+
+      return snap(g, dist, ux);
+    };
+
+    /**
+     * 6. Snap, and 7. the fall.
+     *
+     * The web can't hold. The line breaks at the card and whips back to
+     * the spider loose and wavy as it is reeled in; the card swings back
+     * past its rest and wobbles to a stop; the spider, suddenly relieved
+     * of the load, swings forward and settles. The swing flicks the web
+     * off the corner and it drifts down, crumples and fades.
+     */
+    const snap = async (g, dist, ux) => {
       if (!alive) return true;
 
-      // 6. Lets go: the strand goes slack, sagging, and is reeled in while
-      // the spider turns back to hang straight.
-      animate(shotArc, -dist * 0.09, { duration: 0.4, ease: [0.2, 0.6, 0.4, 1] });
-      animate(shotLen, 0, { duration: 0.46, ease: [0.55, 0, 0.8, 0.3] });
+      // Hand the web from the card to the page at exactly the pose it has
+      // this instant: two pins in card coordinates give its position and
+      // angle on screen. From here the card can swing back on its own.
+      stopTracking();
+      const stage = stageRef.current;
+      const p0 = g.slot.querySelector(".hero-spider__pin-origin");
+      const p1 = g.slot.querySelector(".hero-spider__pin-x");
+      if (stage && p0 && p1) {
+        const sr = stage.getBoundingClientRect();
+        const [x0, y0] = centreOf(p0);
+        const [x1, y1] = centreOf(p1);
+        freeRot.set(Math.atan2(y1 - y0, x1 - x0));
+        setShot((s) => (s ? { ...s, free: { x: x0 - sr.left, y: y0 - sr.top } } : s));
+      }
+
+      animate(shotArc, [0, -dist * 0.1, dist * 0.06, -dist * 0.025, 0], {
+        duration: 0.5,
+        times: [0, 0.25, 0.55, 0.8, 1],
+        ease: "easeOut",
+      });
+      animate(shotLen, 0, { duration: 0.5, ease: [0.5, 0, 0.8, 0.4] });
+      releaseCard();
       unTurn();
-      await later(180);
+      animate(kickX, [kickX.get(), ux * 6, 0], { duration: 0.7, ease: [0.3, 0, 0.3, 1] });
+      animate(kickY, 0, { type: "spring", stiffness: 120, damping: 12 });
+      await later(120);
       if (!alive) return true;
 
-      // 7. The web comes off: top first, folding down over the rest,
-      // then drifting down as a collapsing, swaying clump. Time is fed in
-      // linearly; the physics is in webFrame.
       fallS.set(0); // from "holding" (-1) straight to the moment it lets go
       animate(fallS, FALL_S, { duration: FALL_S, ease: "linear" });
       await later(FALL_S * 1000 + 40);
@@ -1301,23 +1411,46 @@ export default function HeroSpider() {
           <motion.circle className="hero-spider__shot-tip" cx={tipX} cy={tipY} r="2.4" style={{ opacity: tipShow }} />
         </svg>
 
-        {/* The web over the S. Another 1px, overflow-visible SVG, placed on
-            the letter's centre; every strand is redrawn from the web's
-            particles, so it can peel, stretch, fold and crumple rather
-            than moving as one flat piece. */}
-        <motion.svg
-          key={shot.id}
-          className="hero-spider__web-throw"
-          width="1"
-          height="1"
-          style={{ left: shot.gx, top: shot.gy, opacity: webFade }}
-        >
-          <motion.path className="hero-spider__net-halo" d={webMain} />
-          <motion.path className="hero-spider__net-halo is-fine" d={webFine} />
-          <motion.path className="hero-spider__net-silk" d={webMain} />
-          <motion.path className="hero-spider__net-silk is-ring" d={webFine} />
-          <motion.path className="hero-spider__net-bead" d={webBeads} />
-        </motion.svg>
+        {/* The web. While it is stuck it is rendered *inside the card*, so
+            it inherits every swing, turn and lean the card makes and can
+            never drift off it. Pins mark its hub (which the strand tracks)
+            and the card's axes (which hand its pose to the page when it
+            comes off). Once free it is drawn on the page, falling on its
+            own while the card swings back. */}
+        {!shot.free && shotRef.current?.slot &&
+          createPortal(
+            <motion.div key={shot.id} className="hero-spider__web-frame is-on-card" style={{ opacity: webFade }}>
+              <svg className="hero-spider__web-throw" width="1" height="1">
+                <motion.path className="hero-spider__net-halo" d={cardMain} />
+                <motion.path className="hero-spider__net-halo is-fine" d={cardFine} />
+                <motion.path className="hero-spider__net-silk" d={cardMain} />
+                <motion.path className="hero-spider__net-silk is-ring" d={cardFine} />
+                <motion.path className="hero-spider__net-bead" d={cardBeads} />
+              </svg>
+              <span
+                className="hero-spider__pin hero-spider__pin-hub"
+                style={{ left: shotRef.current.hubLX, top: shotRef.current.hubLY }}
+              />
+              <span className="hero-spider__pin hero-spider__pin-origin" style={{ left: 0, top: 0 }} />
+              <span className="hero-spider__pin hero-spider__pin-x" style={{ left: 100, top: 0 }} />
+            </motion.div>,
+            shotRef.current.slot
+          )}
+        {shot.free && (
+          <motion.div
+            key={`free-${shot.id}`}
+            className="hero-spider__web-frame"
+            style={{ left: shot.free.x, top: shot.free.y, opacity: webFade }}
+          >
+            <svg className="hero-spider__web-throw" width="1" height="1">
+              <motion.path className="hero-spider__net-halo" d={pageMain} />
+              <motion.path className="hero-spider__net-halo is-fine" d={pageFine} />
+              <motion.path className="hero-spider__net-silk" d={pageMain} />
+              <motion.path className="hero-spider__net-silk is-ring" d={pageFine} />
+              <motion.path className="hero-spider__net-bead" d={pageBeads} />
+            </svg>
+          </motion.div>
+        )}
       </>
     )}
     <div

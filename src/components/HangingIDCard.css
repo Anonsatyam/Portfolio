@@ -135,6 +135,16 @@
   border-radius: var(--radius-lg, 16px);
 }
 
+/* The spider's web is portalled in here. It covers the card exactly and
+   lets the web spill over the edge, since it wraps round the corner. */
+.id-card__web-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: visible;
+  pointer-events: none;
+}
+
 .id-card__face {
   position: relative;
   border-radius: var(--radius-lg, 16px);

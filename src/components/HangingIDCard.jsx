@@ -3,6 +3,7 @@ import { animate, motion, useMotionValue, useMotionValueEvent, useSpring, useTra
 import { FiMapPin } from "react-icons/fi";
 import { personal } from "../data/content";
 import { prefersReducedMotion } from "../lib/motion";
+import { cardTug } from "../lib/cardTug";
 import "./HangingIDCard.css";
 
 /**
@@ -77,8 +78,10 @@ export default function HangingIDCard() {
   const swayX = useSpring(useTransform(pointerX, [-60, 60], [-14, 14]), SWAY_SPRING);
   const swayY = useSpring(useTransform(pointerY, [-60, 60], [-6, 6]), SWAY_SPRING);
 
-  const totalX = useTransform([dragX, swayX], ([d, s]) => d + s);
-  const totalY = useTransform([dragY, swayY, bounceY], ([d, s, b]) => d + s + b);
+  // The spider's pull on its web line is one more term in the same sum,
+  // so being tugged goes through the spring exactly like being dragged.
+  const totalX = useTransform([dragX, swayX, cardTug.x], ([d, s, t]) => d + s + t);
+  const totalY = useTransform([dragY, swayY, bounceY, cardTug.y], ([d, s, b, t]) => d + s + b + t);
 
   // --- the spring, derived from exactly those numbers ---
   const springLength = useTransform([totalX, totalY], ([x, y]) =>
@@ -89,6 +92,9 @@ export default function HangingIDCard() {
   );
   // A hanging object swings to follow its tether, but lags a little.
   const cardTilt = useTransform(springAngle, (a) => a * 0.55);
+
+  // Pulled by a corner, the card also turns about its hook.
+  const cardRotate = useTransform([cardTilt, cardTug.spin], ([t, s]) => t + s);
 
   // 3D tilt from pointer proximity, kept separate from the swing.
   const tiltY = useTransform(swayX, [-14, 14], [-10, 10]);
@@ -129,6 +135,7 @@ export default function HangingIDCard() {
     releaseX.current?.stop();
     releaseY.current?.stop();
     dragging.current = true;
+    cardTug.dragging = true;
     origin.current = { x: e.clientX - dragX.get(), y: e.clientY - dragY.get() };
     // Belt and braces with user-select in the CSS: some engines still
     // extend a selection from a press that started on text. Only reached
@@ -148,6 +155,7 @@ export default function HangingIDCard() {
   const endDrag = (e) => {
     if (!dragging.current) return;
     dragging.current = false;
+    cardTug.dragging = false;
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     releaseX.current = animate(dragX, 0, RELEASE_SPRING);
     releaseY.current = animate(dragY, 0, RELEASE_SPRING);
@@ -203,7 +211,7 @@ export default function HangingIDCard() {
 
         <motion.div
           className="id-card__hang"
-          style={{ x: totalX, y: totalY, rotate: reduced ? 0 : cardTilt }}
+          style={{ x: totalX, y: totalY, rotate: reduced ? 0 : cardRotate }}
         >
           <motion.div
             className="id-card__stage"
@@ -259,6 +267,9 @@ export default function HangingIDCard() {
                   </a>
                 )}
               </div>
+              {/* Where the spider's web sticks. Inside the card, so the web
+                  swings, tilts and turns with it and can never drift off. */}
+              <div className="id-card__web-slot" aria-hidden="true" />
             </div>
           </motion.div>
         </motion.div>
