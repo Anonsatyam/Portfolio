@@ -132,6 +132,9 @@ const HUB_DROP = 2; // sitting in the middle of the web
 const REST_DROP = 150; // hanging, before any scrolling
 const FOOTER_GAP = 64; // stops just short of the footer
 const NEAR = 190; // how close the pointer gets before it bolts
+// Measured from the hub, and wider than NEAR: once it is up in the web
+// the cursor has to properly leave before it will come back down.
+const LEAVE = 300;
 const MAX_SWAY = 16; // px the spider drifts either side of the hub
 // How far out into the web it will patrol. Capped well inside the
 // frame so it never walks over the hero copy.
@@ -412,11 +415,13 @@ export default function HeroSpider() {
         // the web rather than the spider arriving and doing nothing.
         await wait(2400 + Math.random() * 3600);
         if (!alive) return;
-        // Not while it is hanging, and not for a moment after a scare.
-        // The scare wears off even if the cursor stays parked nearby,
-        // otherwise resting a mouse near the web froze it permanently —
-        // which is exactly when someone is most likely to be watching.
-        if (retreat.get() < 0.5 || Date.now() < spookedUntil) continue;
+        // Not while it is hanging, not while the cursor is still on the
+        // web, and not for a beat after a scare. A spider that has just
+        // been driven off sits tight and watches; wandering out again
+        // under the cursor is what made a hover look like random motion.
+        // The nest behaviour still shows: it goes up on its own every
+        // 13-23s, and the cursor is rarely parked in the corner.
+        if (retreat.get() < 0.5 || bolted || Date.now() < spookedUntil) continue;
 
         const spoke = Math.floor(Math.random() * SPOKES);
         const r = NEST_R * (0.55 + Math.random() * 0.45);
@@ -425,9 +430,9 @@ export default function HeroSpider() {
         // Turn first, then travel. Walking out from the hub in a
         // straight line is walking along a radial.
         await turnTo(headingTo(tx, ty), 340);
-        if (!alive || Date.now() < spookedUntil) continue;
+        if (!alive || bolted || Date.now() < spookedUntil) continue;
         await walkTo(tx, ty);
-        if (!alive || Date.now() < spookedUntil) continue;
+        if (!alive || bolted || Date.now() < spookedUntil) continue;
 
         // Then it works: a strand of capture spiral laid across the
         // sector it is standing in, generated from the web's own
@@ -509,9 +514,11 @@ export default function HeroSpider() {
           settle();
           scheduleVisit();
           // Long enough for a full errand — turn, walk out, work, turn,
-          // walk back — with time either side to simply sit there.
-        }, 11000 + Math.random() * 6000);
-      }, 13000 + Math.random() * 10000);
+          // walk back — and no longer. Hanging on the line is the look
+          // the whole thing is for; the visits are punctuation, so they
+          // want to be roughly a third of the time, not half.
+        }, 10000 + Math.random() * 4000);
+      }, 22000 + Math.random() * 13000);
     };
     scheduleVisit();
 
@@ -527,14 +534,25 @@ export default function HeroSpider() {
 
     if (!window.matchMedia("(pointer: fine)").matches) return stop;
 
+    // Hysteresis, and two different reference points, because otherwise
+    // this is a feedback loop: bolting moves the spider, which moves it
+    // out of its own trigger radius, which sends it back down into the
+    // radius again — a hover made it flick up and down at random.
+    //
+    // Approaching is measured against the spider. Whether to stay up is
+    // measured against the hub, which does not move, over a wider area.
     const onMove = (e) => {
       const el = bodyRef.current;
-      if (!el) return;
+      const hubBox = hubRef.current?.getBoundingClientRect();
+      if (!el || !hubBox) return;
       const r = el.getBoundingClientRect();
       const dx = e.clientX - (r.left + r.width / 2);
       const dy = e.clientY - (r.top + r.height / 2);
       pointerX.set(Math.max(-320, Math.min(320, dx)));
-      bolted = Math.hypot(dx, dy) < NEAR;
+
+      bolted = inNest
+        ? Math.hypot(e.clientX - hubBox.left, e.clientY - hubBox.top) < LEAVE
+        : Math.hypot(dx, dy) < NEAR;
       settle();
     };
 
